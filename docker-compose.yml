@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # 1. PostgreSQL with pgvector (Database + Vector DB)
+  # 1. PostgreSQL (Shared Instance)
   postgres:
     image: pgvector/pgvector:pg16
     container_name: kreativ_postgres
@@ -9,9 +9,11 @@ services:
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_DB: ${POSTGRES_DB} # Default DB
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      # Init script to create ToolJet DB user/db if not exists
+      - ./init-scripts:/docker-entrypoint-initdb.d
     ports:
       - "5432:5432"
     networks:
@@ -22,7 +24,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # 2. Redis (Cache & Queue)
+  # 2. Redis
   redis:
     image: redis:alpine
     container_name: kreativ_redis
@@ -40,7 +42,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # 3. N8N (Automation Orchestrator)
+  # 3. N8N
   n8n:
     image: n8nio/n8n:latest
     container_name: kreativ_n8n
@@ -58,8 +60,8 @@ services:
       - NODE_ENV=${NODE_ENV}
       - DB_TYPE=postgresdb
       - DB_POSTGRESDB_DATABASE=${POSTGRES_DB}
-      - DB_POSTGRESDB_HOST=postgres
-      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_HOST=${POSTGRES_HOST}
+      - DB_POSTGRESDB_PORT=${POSTGRES_PORT}
       - DB_POSTGRESDB_USER=${POSTGRES_USER}
       - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
     links:
@@ -75,7 +77,7 @@ services:
     networks:
       - kreativ_net
 
-  # 4. BuilderBot (Node.js Base Container)
+  # 4. BuilderBot (Official API Mode)
   builderbot:
     image: node:21-alpine
     container_name: kreativ_builderbot
@@ -85,16 +87,43 @@ services:
     environment:
       - NODE_ENV=development
       - PORT=${BUILDERBOT_PORT}
+      # Database connection for bot state
       - POSTGRES_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
+      # Meta Provider Config
+      - WA_TOKEN=${META_JWT_TOKEN}
+      - WA_ID=${META_NUMBER_ID}
+      - WA_VERIFY_TOKEN=${META_VERIFY_TOKEN}
+      - WA_VERSION=${META_VERSION}
     volumes:
       - ./apps/builderbot:/app
-    command: tail -f /dev/null # Keeps container running for development/exec
+    command: tail -f /dev/null
     ports:
       - "${BUILDERBOT_PORT}:${BUILDERBOT_PORT}"
     depends_on:
       - postgres
       - redis
+    networks:
+      - kreativ_net
+
+  # 5. ToolJet (Management Dashboard)
+  tooljet:
+    image: tooljet/tooljet:v2.23.0-aa # Using a specific stable version or 'latest'
+    container_name: kreativ_tooljet
+    restart: always
+    ports:
+      - "8080:80"
+    environment:
+      - LOCKBOX_KEY=${LOCKBOX_KEY}
+      - PG_HOST=${POSTGRES_HOST}
+      - PG_DB=${TOOLJET_DB_NAME}
+      - PG_USER=${POSTGRES_USER} # Using root user for simplicity in setup, or create separate
+      - PG_PASSWORD=${POSTGRES_PASSWORD}
+      - PG_PORT=${POSTGRES_PORT}
+      - TOOLJET_HOST=${TOOLJET_HOST}
+      - DEPLOYMENT_PLATFORM=docker
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - kreativ_net
 
