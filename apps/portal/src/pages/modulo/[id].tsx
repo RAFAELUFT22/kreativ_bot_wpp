@@ -7,9 +7,9 @@ interface Module {
     id: string
     title: string
     description: string
-    content: string
-    module_order: number
-    course_id: number
+    content_text: string
+    module_number: number
+    course_id: string
     course_name: string
 }
 
@@ -31,9 +31,10 @@ export const getServerSideProps: GetServerSideProps = async ({ params }) => {
     const id = params?.id as string
     try {
         const { rows } = await pool.query(`
-      SELECT m.*, c.name as course_name 
+      SELECT m.*,
+        COALESCE(c.name, m.course_id) as course_name
       FROM modules m
-      LEFT JOIN courses c ON c.id = m.course_id::integer
+      LEFT JOIN courses c ON c.id::text = m.course_id
       WHERE m.id = $1
     `, [id])
 
@@ -43,7 +44,7 @@ export const getServerSideProps: GetServerSideProps = async ({ params }) => {
         const courseId = mod.course_id
 
         const { rows: siblings } = await pool.query(
-            `SELECT id, module_order FROM modules WHERE course_id = $1 ORDER BY module_order`,
+            `SELECT id, module_number FROM modules WHERE course_id = $1 ORDER BY module_number`,
             [courseId]
         )
 
@@ -83,7 +84,7 @@ export default function ModulePage({ module: mod, prevId, nextId }: Props) {
             <nav className="navbar">
                 <div className="navbar-inner">
                     <Link href="/" className="logo">Kreativ <span>Portal</span></Link>
-                    <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Módulo {mod.module_order}</span>
+                    <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Módulo {mod.module_number}</span>
                 </div>
             </nav>
 
@@ -91,7 +92,7 @@ export default function ModulePage({ module: mod, prevId, nextId }: Props) {
                 <div className="module-header">
                     <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
                         {mod.course_name && <span className="tag">{mod.course_name}</span>}
-                        <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Módulo {mod.module_order}</span>
+                        <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Módulo {mod.module_number}</span>
                     </div>
                     <h1>{mod.title}</h1>
                     {mod.description && (
@@ -100,8 +101,8 @@ export default function ModulePage({ module: mod, prevId, nextId }: Props) {
                 </div>
 
                 <div className="module-body">
-                    {mod.content ? (
-                        <div dangerouslySetInnerHTML={{ __html: mod.content.replace(/\n/g, '<br />') }} />
+                    {mod.content_text ? (
+                        <div dangerouslySetInnerHTML={{ __html: mod.content_text.replace(/\n/g, '<br />') }} />
                     ) : (
                         <div className="centered" style={{ minHeight: '200px' }}>
                             <p>Conteúdo em preparação. Acesse pelo WhatsApp para a versão completa.</p>

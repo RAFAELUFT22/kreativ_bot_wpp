@@ -7,7 +7,7 @@ interface Module {
     id: string
     title: string
     description: string
-    module_order: number
+    module_number: number
     course_name: string
 }
 
@@ -27,10 +27,11 @@ const pool = new Pool({
 export const getServerSideProps: GetServerSideProps = async () => {
     try {
         const { rows } = await pool.query(`
-      SELECT m.id, m.title, m.description, m.module_order, c.name as course_name
+      SELECT m.id, m.title, m.description, m.module_number,
+        COALESCE(c.name, m.course_id) as course_name
       FROM modules m
-      LEFT JOIN courses c ON c.id = m.course_id::integer
-      ORDER BY m.module_order ASC
+      LEFT JOIN courses c ON c.id::text = m.course_id
+      ORDER BY m.module_number ASC
       LIMIT 50
     `)
         return { props: { modules: rows } }
@@ -96,7 +97,7 @@ export default function Home({ modules, error }: Props) {
                         <div className="cards two-col">
                             {modules.map((mod) => (
                                 <Link key={mod.id} href={`/modulo/${mod.id}`} className="card">
-                                    <div className="card-badge">📘 Módulo {mod.module_order}</div>
+                                    <div className="card-badge">📘 Módulo {mod.module_number}</div>
                                     <h2>{mod.title}</h2>
                                     <p>{mod.description || 'Clique para acessar o conteúdo deste módulo.'}</p>
                                     <div className="card-footer">

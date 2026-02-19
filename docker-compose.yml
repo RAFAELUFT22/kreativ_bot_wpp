@@ -385,7 +385,7 @@ services:
     image: chatwoot/chatwoot:v3.15.0
     container_name: kreativ_chatwoot_app
     restart: always
-    command: bundle exec rails s -p 3000 -b 0.0.0.0
+    command: sh -c "rm -f /app/tmp/pids/server.pid && bundle exec rails s -p 3000 -b 0.0.0.0"
     environment: &chatwoot_env
       RAILS_ENV: production
       SECRET_KEY_BASE: ${CHATWOOT_SECRET_KEY}
