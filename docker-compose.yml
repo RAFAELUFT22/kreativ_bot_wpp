@@ -133,7 +133,7 @@ services:
       CHATWOOT_BOT_CONTACT: "true"
 
       # --- Log ---
-      LOG_LEVEL: ERROR
+      LOG_LEVEL: DEBUG
       LOG_COLOR: "false"
       LOG_BAILEYS: error
       DEL_INSTANCE: "false"
@@ -180,7 +180,7 @@ services:
       N8N_PROTOCOL: ${N8N_PROTOCOL:-https}
       WEBHOOK_URL: ${WEBHOOK_URL}
       N8N_EDITOR_BASE_URL: ${WEBHOOK_URL}
-      N8N_BASIC_AUTH_ACTIVE: ${N8N_BASIC_AUTH_ACTIVE:-true}
+      N8N_BASIC_AUTH_ACTIVE: "false"
       N8N_BASIC_AUTH_USER: ${N8N_BASIC_AUTH_USER}
       N8N_BASIC_AUTH_PASSWORD: ${N8N_BASIC_AUTH_PASSWORD}
       DB_TYPE: postgresdb
@@ -191,13 +191,21 @@ services:
       DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD}
       N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
       NODE_ENV: production
-      EXECUTIONS_PROCESS: main
       N8N_METRICS: "false"
       N8N_PROXY_HOPS: 1
       N8N_COMMUNITY_PACKAGES_ALLOW_TOOL_USAGE: "true"
       N8N_AI_ENABLED: "true"
       ACTIVE_LLM_PROVIDER: ${ACTIVE_LLM_PROVIDER:-openrouter}
       OPEN_ROUTER_API: ${OPEN_ROUTER_API}
+      NODE_FUNCTION_ALLOW_BUILTIN: "*"
+      NODE_FUNCTION_ALLOW_EXTERNAL: "*"
+      # --- Memory & Execution Optimization ---
+      EXECUTIONS_PROCESS: ownProcess
+      EXECUTIONS_DATA_PRUNE: "true"
+      EXECUTIONS_DATA_MAX_AGE: 168
+      EXECUTIONS_DATA_PRUNE_MAX_COUNT: 1000
+      N8N_DEFAULT_BINARY_DATA_MODE: filesystem
+      NODE_OPTIONS: "--max-old-space-size=2048"
 
     volumes:
       - n8n_data:/home/node/.n8n
@@ -395,7 +403,7 @@ services:
   # ---------------------------------------------------------------------------
 
   chatwoot-app:
-    image: chatwoot/chatwoot:v3.15.0
+    image: chatwoot/chatwoot:v4.11.0
     container_name: kreativ_chatwoot_app
     restart: always
     command: sh -c "rm -f /app/tmp/pids/server.pid && bundle exec rails s -p 3000 -b 0.0.0.0"
@@ -414,6 +422,9 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       ACTIVE_STORAGE_SERVICE: local
       INSTALLATION_ENV: docker
+      CW_AI_ENABLED: "true"
+      INSTALLATION_NAME: KreativEdu
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
       LOG_LEVEL: warn
     networks:
       - kreativ_net
@@ -437,7 +448,7 @@ services:
         condition: service_healthy
 
   chatwoot-sidekiq:
-    image: chatwoot/chatwoot:v3.15.0
+    image: chatwoot/chatwoot:v4.11.0
     container_name: kreativ_chatwoot_sidekiq
     restart: always
     command: bundle exec sidekiq -C config/sidekiq.yml

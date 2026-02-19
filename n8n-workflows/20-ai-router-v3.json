@@ -200,7 +200,7 @@
             "parameters": {
                 "operation": "lpush",
                 "key": "={{ \"chat_history:\" + $node[\"Transformer\"].json.phone }}",
-                "value": "={{ JSON.stringify({ role: 'user', content: $node[\"Transformer\"].json.body }) }}"
+                "value": "={{ JSON.stringify({ role: 'user', content: $node[\"Transformer\"].json.body.substring(0, 2000) }) }}"
             },
             "credentials": {
                 "redis": {
@@ -221,7 +221,7 @@
             "parameters": {
                 "operation": "lpush",
                 "key": "={{ \"chat_history:\" + $node[\"Transformer\"].json.phone }}",
-                "value": "={{ JSON.stringify({ role: 'assistant', content: $json.choices[0].message.content }) }}"
+                "value": "={{ JSON.stringify({ role: 'assistant', content: $json.choices[0].message.content.substring(0, 2000) }) }}"
             },
             "credentials": {
                 "redis": {
