@@ -11,8 +11,10 @@
   },
   "dependencies": {
     "@builderbot/bot": "^1.2.1",
-    "@builderbot/provider-evolution-api": "^1.2.1",
     "@builderbot/database-postgres": "^1.2.1",
+    "@builderbot/provider-evolution-api": "^1.2.1",
+    "@modelcontextprotocol/sdk": "^1.26.0",
+    "eventsource": "^4.1.0",
     "openai": "^4.72.0",
     "pg": "^8.11.3"
   },

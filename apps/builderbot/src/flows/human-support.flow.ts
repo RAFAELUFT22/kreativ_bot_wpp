@@ -8,7 +8,7 @@ import type { BotContext, BotMethods } from '@builderbot/bot/dist/types'
 //         3) pausa o bot para aquele número via POST /api/pause no BuilderBot.
 // =============================================================================
 
-const N8N_BASE = process.env.N8N_WEBHOOK_BASE || 'http://n8n:5678/webhook'
+import { mcpClient } from '../services/mcp-client'
 
 // Keywords que disparam transferência para humano
 // Tupla explícita exigida pela tipagem do BuilderBot
@@ -43,17 +43,9 @@ export const humanSupportFlow = addKeyword(HUMAN_KEYWORDS)
             try {
                 // N8N recebe o pedido e: distribui para tutor (round-robin),
                 // registra sessão, e chama POST /api/pause no BuilderBot
-                const response = await fetch(`${N8N_BASE}/request-human-support`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ phone, reason }),
-                })
-
-                const result = await response.json() as {
-                    tutorName: string
-                    estimatedWait: string
-                    success: boolean
-                }
+                // MCP: Solicitar tutor via N8N
+                const resultTools = await mcpClient.requestTutor(phone, reason)
+                const result = resultTools.content[0].text ? JSON.parse(resultTools.content[0].text) : { success: false }
 
                 if (result.success) {
                     await flowDynamic([

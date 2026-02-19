@@ -10,6 +10,7 @@ import type { BotContext, BotMethods } from '@builderbot/bot/dist/types'
 
 // N8N_WEBHOOK_BASE está disponível via env: http://n8n:5678/webhook
 const N8N_BASE = process.env.N8N_WEBHOOK_BASE || 'http://n8n:5678/webhook'
+import { mcpClient } from '../services/mcp-client'
 
 interface QuizQuestion {
     id: number
@@ -111,24 +112,21 @@ export const quizFlow = addKeyword(['quiz', 'QUIZ', 'avaliação', 'prova'])
             const moduleNum = (await state.get('currentModule')) as number
 
             try {
-                // Envia resposta ao N8N para registro e validação
-                const response = await fetch(`${N8N_BASE}/submit-quiz-answer`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        phone,
-                        moduleNumber: moduleNum,
-                        questionIndex: 0,
-                        answer,
-                    }),
-                })
+                const questions = (await state.get('quizQuestions')) as QuizQuestion[] | undefined
+                const q = questions?.[0]
+                const isCorrect = q ? answer === q.answer.trim().toUpperCase() : false
+                const score = isCorrect ? 100 : 0
+                const moduleComplete = true // Quiz de 1 pergunta, sempre completa tentativa
 
-                const result = await response.json() as {
-                    correct: boolean
-                    feedback: string
-                    moduleComplete: boolean
-                    score: number
-                    nextModule?: number
+                // Salvar progresso via MCP
+                await mcpClient.saveProgress(phone, moduleNum, score, score >= 70)
+
+                const result = {
+                    correct: isCorrect,
+                    feedback: q ? (isCorrect ? q.feedbackCorrect : q.feedbackWrong) : 'Questão não encontrada',
+                    moduleComplete: true,
+                    score: score,
+                    nextModule: moduleNum + 1
                 }
 
                 const feedbackMsg = result.correct

@@ -1,0 +1,86 @@
+{
+    "name": "Kreativ: Save Progress (Webhook)",
+    "nodes": [
+        {
+            "id": "wh-save",
+            "name": "Webhook save-progress",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2,
+            "position": [
+                240,
+                300
+            ],
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "save-progress",
+                "responseMode": "responseNode",
+                "options": {}
+            },
+            "webhookId": "kreativ-save-progress"
+        },
+        {
+            "id": "pg-update",
+            "name": "Atualizar DB",
+            "type": "n8n-nodes-base.postgres",
+            "typeVersion": 2.6,
+            "position": [
+                460,
+                300
+            ],
+            "parameters": {
+                "operation": "executeQuery",
+                "query": "UPDATE students \nSET \n  scores = scores || jsonb_build_object('module_' || {{ $json.body.moduleId }}, {{ $json.body.score }}),\n  completed_modules = CASE \n    WHEN {{ $json.body.completed ?? false }} AND NOT ({{ $json.body.moduleId }} = ANY(completed_modules))\n    THEN array_append(completed_modules, {{ $json.body.moduleId }})\n    ELSE completed_modules\n  END,\n  current_module = GREATEST(current_module, {{ $json.body.moduleId }} + CASE WHEN {{ $json.body.completed ?? false }} THEN 1 ELSE 0 END),\n  updated_at = NOW()\nWHERE phone = '{{ $json.body.phone }}'",
+                "options": {}
+            },
+            "credentials": {
+                "postgres": {
+                    "id": "lJaeEy4CpHbhgMAp",
+                    "name": "Kreativ PostgreSQL"
+                }
+            },
+            "continueOnFail": true
+        },
+        {
+            "id": "respond",
+            "name": "Responder",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1,
+            "position": [
+                680,
+                300
+            ],
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={{ JSON.stringify({ success: true }) }}"
+            }
+        }
+    ],
+    "connections": {
+        "Webhook save-progress": {
+            "main": [
+                [
+                    {
+                        "node": "Atualizar DB",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Atualizar DB": {
+            "main": [
+                [
+                    {
+                        "node": "Responder",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1",
+        "callerPolicy": "workflowsFromSameOwner"
+    }
+}

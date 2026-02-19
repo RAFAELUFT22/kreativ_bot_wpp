@@ -29,7 +29,7 @@
       ],
       "parameters": {
         "operation": "executeQuery",
-        "query": "WITH upserted AS (\n  INSERT INTO students (phone, attendance_status)\n  VALUES ('{{ $json.body.phone ?? $json.phone }}', 'human')\n  ON CONFLICT (phone) DO UPDATE\n    SET attendance_status = 'human', updated_at = NOW()\n  RETURNING id\n)\nINSERT INTO support_sessions (student_id, reason)\nSELECT id, '{{ ($json.body.reason ?? $json.reason ?? 'Solicitação via bot') | replace(\"'\", \"''\") }}'\nFROM upserted\nRETURNING id",
+        "query": "WITH upserted AS (\n  INSERT INTO students (phone, attendance_status)\n  VALUES ('{{ $json.body.phone }}', 'human')\n  ON CONFLICT (phone) DO UPDATE\n    SET attendance_status = 'human', updated_at = NOW()\n  RETURNING id\n)\nINSERT INTO support_sessions (student_id, reason)\nSELECT id, '{{ ($json.body.reason ?? 'Solicitação via bot') | replace(\"'\", \"''\") }}'\nFROM upserted\nRETURNING id",
         "options": {}
       },
       "credentials": {
@@ -41,30 +41,252 @@
       "continueOnFail": true
     },
     {
-      "id": "code-notify",
-      "name": "Montar resposta suporte",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "id": "http-search-contact",
+      "name": "Buscar Contato Chatwoot",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
         680,
         300
       ],
       "parameters": {
-        "jsCode": "// Em produção: adicionar notificação ao tutor aqui\n// Ex: POST para Telegram, e-mail, Chatwoot, etc.\n\n// Por enquanto retorna resposta padrão\nreturn [{\n  json: {\n    success: true,\n    tutorName: 'Equipe Kreativ',\n    estimatedWait: 'até 30 minutos (horário comercial)'\n  }\n}];"
+        "method": "GET",
+        "url": "http://chatwoot-app:3000/api/v1/accounts/2/contacts/search",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "={{ $('Webhook request-human-support').item.json.body.phone }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "hh5bHLwTRyKoqZzAvaPUUm5v"
+            }
+          ]
+        },
+        "options": {}
       }
     },
     {
-      "id": "respond-support",
-      "name": "Responder BuilderBot",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1,
+      "id": "if-contact-exists",
+      "name": "Contato existe?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
       "position": [
         900,
         300
       ],
       "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.payload.length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "http-create-contact",
+      "name": "Criar Contato",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        400
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://chatwoot-app:3000/api/v1/accounts/2/contacts",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ name: $('Webhook request-human-support').item.json.body.phone, phone_number: $('Webhook request-human-support').item.json.body.phone }) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "hh5bHLwTRyKoqZzAvaPUUm5v"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "merge-contact",
+      "name": "Unir dados contato",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const input = $input.item.json;\nlet contactId = null;\n\n// Case 1: Input comes from 'Criar Contato' (newly created)\nif (input.payload && input.payload.contact) {\n  contactId = input.payload.contact.id;\n}\n// Case 2: Input comes from 'Contato existe?' (existing contact search result)\nelse if (input.payload && Array.isArray(input.payload) && input.payload.length > 0) {\n  contactId = input.payload[0].id;\n}\n\nreturn [{ json: { contactId } }];"
+      }
+    },
+    {
+      "id": "http-check-conv",
+      "name": "Checar Conversa Aberta",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1560,
+        300
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'http://chatwoot-app:3000/api/v1/accounts/2/contacts/' + $json.contactId + '/conversations' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "hh5bHLwTRyKoqZzAvaPUUm5v"
+            }
+          ]
+        },
+        "options": {
+          "ignoreResponseCode": true
+        }
+      }
+    },
+    {
+      "id": "conv-exists",
+      "name": "Tem conversa aberta?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1780,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.payload && $json.payload.length > 0 && $json.payload.some(c => c.status === 'open') }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "http-create-conv",
+      "name": "Criar Conversa",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2000,
+        400
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://chatwoot-app:3000/api/v1/accounts/2/conversations",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source_id: $('Unir dados contato').item.json.contactId, inbox_id: 2, status: 'open' }) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "hh5bHLwTRyKoqZzAvaPUUm5v"
+            }
+          ]
+        },
+        "options": {
+          "ignoreResponseCode": true
+        }
+      }
+    },
+    {
+      "id": "merge-conv",
+      "name": "Definir Conversa ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2220,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const input = $input.item.json;\nconst existingConvs = $('Checar Conversa Aberta').item.json.payload;\nlet id = null;\n\n// Check if we came from 'Criar Conversa' (newly created)\nif (input.id) {\n  id = input.id;\n} \n// Check if we came from 'Tem conversa aberta?' (existing)\nelse if (existingConvs && existingConvs.length > 0) {\n  const open = existingConvs.find(c => c.status === 'open');\n  if (open) id = open.id;\n}\n\nreturn [{ json: { id } }];"
+      }
+    },
+    {
+      "id": "http-send-msg",
+      "name": "Enviar Mensagem Inicial",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2440,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'http://chatwoot-app:3000/api/v1/accounts/2/conversations/' + $json.id + '/messages' }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ content: '🚨 SOLICITAÇÃO DE SUPORTE\\nMotivo: ' + $('Webhook request-human-support').item.json.body.reason, message_type: 'incoming', private: false }) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "hh5bHLwTRyKoqZzAvaPUUm5v"
+            }
+          ]
+        },
+        "options": {
+          "ignoreResponseCode": true
+        }
+      }
+    },
+    {
+      "id": "respond-success",
+      "name": "Responder BuilderBot",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        2660,
+        300
+      ],
+      "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ JSON.stringify($json) }}"
+        "responseBody": "={{ JSON.stringify({ success: true, tutorName: 'Equipe Kreativ', estimatedWait: 'até 30 minutos' }) }}"
       }
     }
   ],
@@ -84,14 +306,116 @@
       "main": [
         [
           {
-            "node": "Montar resposta suporte",
+            "node": "Buscar Contato Chatwoot",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Montar resposta suporte": {
+    "Buscar Contato Chatwoot": {
+      "main": [
+        [
+          {
+            "node": "Contato existe?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contato existe?": {
+      "main": [
+        [
+          {
+            "node": "Unir dados contato",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Criar Contato",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Criar Contato": {
+      "main": [
+        [
+          {
+            "node": "Unir dados contato",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unir dados contato": {
+      "main": [
+        [
+          {
+            "node": "Checar Conversa Aberta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Checar Conversa Aberta": {
+      "main": [
+        [
+          {
+            "node": "Tem conversa aberta?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tem conversa aberta?": {
+      "main": [
+        [
+          {
+            "node": "Definir Conversa ID",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Criar Conversa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Criar Conversa": {
+      "main": [
+        [
+          {
+            "node": "Definir Conversa ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Definir Conversa ID": {
+      "main": [
+        [
+          {
+            "node": "Enviar Mensagem Inicial",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Mensagem Inicial": {
       "main": [
         [
           {

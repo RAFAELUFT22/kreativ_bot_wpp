@@ -132,7 +132,7 @@
         300
       ],
       "parameters": {
-        "jsCode": "const phone = $('Extrair dados').item.json.phone;\nconst message = $('Extrair dados').item.json.message;\nconst pushName = $('Extrair dados').item.json.pushName;\nconst originalPayload = $('Extrair dados').item.json.originalPayload;\n\nlet route = 'deepseek'; // default: novo usuário ou chat livre\n\ntry {\n  const rows = $input.all();\n  const dbRow = rows[0]?.json;\n\n  // DB retornou dados válidos (não só erro ou vazio)\n  if (dbRow && dbRow.attendance_status !== undefined) {\n    const status = dbRow.attendance_status;\n    const mod = parseInt(String(dbRow.current_module ?? '0'), 10);\n\n    if (status === 'human') {\n      route = 'paused'; // tutor atendendo, bot silencioso\n    } else if (mod > 0) {\n      route = 'builderbot'; // em módulo/quiz estruturado\n    }\n    // mod=0 e status!='human' → deepseek (boas-vindas / chat livre)\n  }\n} catch(e) {\n  // erro no DB → fallback deepseek\n}\n\nreturn [{ json: { phone, message, pushName, originalPayload, route } }];"
+        "jsCode": "const phone = $('Extrair dados').item.json.phone;\nconst message = $('Extrair dados').item.json.message;\nconst pushName = $('Extrair dados').item.json.pushName;\nconst originalPayload = $('Extrair dados').item.json.originalPayload;\n\nlet route = 'deepseek';\n\ntry {\n  const rows = $input.all();\n  const dbRow = rows[0]?.json;\n\n  if (dbRow && dbRow.attendance_status !== undefined) {\n    const status = dbRow.attendance_status;\n    const mod = parseInt(String(dbRow.current_module ?? '0'), 10);\n\n    if (status === 'human') {\n      route = 'paused';\n    } else if (mod > 0) {\n      route = 'builderbot';\n    }\n  }\n} catch(e) {}\n\nreturn [{ json: { phone, message, pushName, originalPayload, route } }];"
       }
     },
     {
@@ -202,17 +202,6 @@
       }
     },
     {
-      "id": "n-paused",
-      "name": "Bot pausado (tutor ativo)",
-      "type": "n8n-nodes-base.noOp",
-      "typeVersion": 1,
-      "position": [
-        1560,
-        120
-      ],
-      "parameters": {}
-    },
-    {
       "id": "n-builderbot",
       "name": "Encaminhar BuilderBot",
       "type": "n8n-nodes-base.httpRequest",
@@ -223,7 +212,7 @@
       ],
       "parameters": {
         "method": "POST",
-        "url": "http://kreativ_builderbot:3008/",
+        "url": "http://kreativ_builderbot:3008/webhook",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify($json.originalPayload) }}",
@@ -242,7 +231,7 @@
         480
       ],
       "parameters": {
-        "jsCode": "const message = $input.item.json.message;\nconst pushName = $input.item.json.pushName;\n\nconst systemPrompt = `Você é um assistente educacional da Kreativ Educação, plataforma de ensino via WhatsApp.\\n\\nRegras:\\n- Responda sempre em português brasileiro\\n- Seja amigável, didático e encorajador\\n- Respostas concisas (máximo 3 parágrafos para WhatsApp)\\n- Se o aluno quiser aprender, diga que ele pode responder MODULO para iniciar a trilha estruturada\\n- Se não souber algo específico, diga que verificará com a equipe`;\n\nreturn [{\n  json: {\n    phone: $input.item.json.phone,\n    message,\n    pushName,\n    deepseekPayload: {\n      model: \"deepseek-chat\",\n      messages: [\n        { role: \"system\", content: systemPrompt },\n        { role: \"user\", content: message }\n      ],\n      temperature: 0.7\n    }\n  }\n}];"
+        "jsCode": "const message = $input.item.json.message;\nconst pushName = $input.item.json.pushName;\n\nreturn [{\n  json: {\n    phone: $input.item.json.phone,\n    message,\n    pushName,\n    deepseekPayload: {\n      model: \"deepseek-chat\",\n      messages: [\n        { role: \"system\", content: \"Você é um assistente educacional da Kreativ Educação, plataforma de ensino via WhatsApp.\\n\\nRegras:\\n- Responda sempre em português brasileiro\\n- Seja amigável, didático e encorajador\\n- Respostas concisas (máximo 3 parágrafos para WhatsApp)\\n- Se o aluno quiser aprender, diga que ele pode responder MODULO para iniciar a trilha estruturada\\n- Se não souber algo específico, diga que verificará com a equipe\" },\n        { role: \"user\", content: message }\n      ],\n      temperature: 0.7\n    }\n  }\n}];"
       }
     },
     {
@@ -286,7 +275,7 @@
         480
       ],
       "parameters": {
-        "jsCode": "const phone = $('Determinar rota').item.json.phone;\nconst choices = $input.item.json.choices;\n\nif (!choices || choices.length === 0) {\n  return [{ json: { phone, aiResponse: 'Desculpe, não consegui processar sua mensagem. Tente novamente.' } }];\n}\n\nconst aiResponse = choices[0]?.message?.content ?? 'Desculpe, ocorreu um erro. Tente novamente.';\n\nreturn [{ json: { phone, aiResponse } }];"
+        "jsCode": "const phone = $('Determinar rota').item.json.phone;\nconst choices = $input.item.json.choices;\nconst aiResponse = choices?.[0]?.message?.content ?? 'Desculpe, erro na IA.';\nreturn [{ json: { phone, aiResponse } }];"
       }
     },
     {
@@ -314,6 +303,90 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ number: $json.phone, text: $json.aiResponse }) }}",
         "options": {}
+      }
+    },
+    {
+      "id": "cw-search",
+      "name": "Buscar Contato CW",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1560,
+        100
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "http://chatwoot-app:3000/api/v1/accounts/2/contacts/search",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "={{ $('Extrair dados').item.json.phone }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "hh5bHLwTRyKoqZzAvaPUUm5v"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "cw-find-conv",
+      "name": "Buscar Conversas Contato",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1780,
+        100
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'http://chatwoot-app:3000/api/v1/accounts/2/contacts/' + $json.payload[0].id + '/conversations' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "hh5bHLwTRyKoqZzAvaPUUm5v"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "cw-send",
+      "name": "Enviar p/ Chatwoot",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2000,
+        100
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'http://chatwoot-app:3000/api/v1/accounts/2/conversations/' + $json.payload[0].id + '/messages' }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ content: $('Extrair dados').item.json.message, message_type: 'incoming', private: false }) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "hh5bHLwTRyKoqZzAvaPUUm5v"
+            }
+          ]
+        },
+        "options": {
+          "ignoreResponseCode": true
+        }
       }
     }
   ],
@@ -377,7 +450,7 @@
       "main": [
         [
           {
-            "node": "Bot pausado (tutor ativo)",
+            "node": "Buscar Contato CW",
             "type": "main",
             "index": 0
           }
@@ -425,6 +498,28 @@
         [
           {
             "node": "Enviar resposta WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Contato CW": {
+      "main": [
+        [
+          {
+            "node": "Buscar Conversas Contato",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Conversas Contato": {
+      "main": [
+        [
+          {
+            "node": "Enviar p/ Chatwoot",
             "type": "main",
             "index": 0
           }

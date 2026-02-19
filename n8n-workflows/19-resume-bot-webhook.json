@@ -1,0 +1,122 @@
+{
+    "name": "Kreativ: Resume Bot (Webhook)",
+    "nodes": [
+        {
+            "id": "wh-resume",
+            "name": "Webhook resume-bot",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2,
+            "position": [
+                240,
+                300
+            ],
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "resume-bot",
+                "responseMode": "responseNode",
+                "options": {}
+            },
+            "webhookId": "kreativ-resume-bot"
+        },
+        {
+            "id": "pg-update",
+            "name": "Status -> Bot",
+            "type": "n8n-nodes-base.postgres",
+            "typeVersion": 2.6,
+            "position": [
+                460,
+                300
+            ],
+            "parameters": {
+                "operation": "executeQuery",
+                "query": "UPDATE students SET attendance_status = 'bot', updated_at = NOW() WHERE phone = '{{ $json.body.phone }}'",
+                "options": {}
+            },
+            "credentials": {
+                "postgres": {
+                    "id": "lJaeEy4CpHbhgMAp",
+                    "name": "Kreativ PostgreSQL"
+                }
+            }
+        },
+        {
+            "id": "send-msg",
+            "name": "Mensagem WhatsApp",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                680,
+                300
+            ],
+            "parameters": {
+                "method": "POST",
+                "url": "http://kreativ_evolution:8080/message/sendText/europs",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "apikey",
+                            "value": "EXr5OuEE2sBMbRo94LtWQfofvEF1gHUM"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ number: $('Webhook resume-bot').item.json.body.phone, text: $('Webhook resume-bot').item.json.body.message || 'Olá! O atendimento humano foi finalizado. Como posso ajudar?' }) }}"
+            }
+        },
+        {
+            "id": "respond",
+            "name": "Responder",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1,
+            "position": [
+                900,
+                300
+            ],
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={{ JSON.stringify({ success: true }) }}"
+            }
+        }
+    ],
+    "connections": {
+        "Webhook resume-bot": {
+            "main": [
+                [
+                    {
+                        "node": "Status -> Bot",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Status -> Bot": {
+            "main": [
+                [
+                    {
+                        "node": "Mensagem WhatsApp",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Mensagem WhatsApp": {
+            "main": [
+                [
+                    {
+                        "node": "Responder",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1",
+        "callerPolicy": "workflowsFromSameOwner"
+    }
+}

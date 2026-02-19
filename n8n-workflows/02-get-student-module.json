@@ -6,7 +6,10 @@
       "name": "Webhook get-student-module",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [240, 300],
+      "position": [
+        240,
+        300
+      ],
       "parameters": {
         "httpMethod": "POST",
         "path": "get-student-module",
@@ -20,7 +23,10 @@
       "name": "Extrair telefone",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [460, 300],
+      "position": [
+        460,
+        300
+      ],
       "parameters": {
         "jsCode": "const body = $input.item.json.body ?? $input.item.json;\nconst phone = body.phone ?? '';\nreturn [{ json: { phone } }];"
       }
@@ -30,7 +36,10 @@
       "name": "Criar ou atualizar aluno",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
-      "position": [680, 300],
+      "position": [
+        680,
+        300
+      ],
       "parameters": {
         "operation": "executeQuery",
         "query": "INSERT INTO students (phone, current_module, attendance_status) VALUES ('{{ $json.phone }}', 1, 'bot') ON CONFLICT (phone) DO UPDATE SET updated_at = NOW() RETURNING id, phone, current_module, attendance_status",
@@ -49,7 +58,10 @@
       "name": "Determinar módulo atual",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [900, 300],
+      "position": [
+        900,
+        300
+      ],
       "parameters": {
         "jsCode": "const phone = $('Extrair telefone').item.json.phone;\nconst row = $input.item.json;\n\n// Se upsert falhou (continueOnFail), usa módulo 1\nconst currentModule = parseInt(String(row.current_module ?? row.json?.current_module ?? '1'), 10) || 1;\n\nreturn [{ json: { phone, currentModule } }];"
       }
@@ -59,7 +71,10 @@
       "name": "Buscar conteúdo do módulo",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
-      "position": [1120, 300],
+      "position": [
+        1120,
+        300
+      ],
       "parameters": {
         "operation": "executeQuery",
         "query": "SELECT module_number, title, content_text, quiz_questions FROM modules WHERE course_id = 'default' AND module_number = {{ $json.currentModule }} AND is_active = true LIMIT 1",
@@ -78,9 +93,12 @@
       "name": "Montar resposta",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1340, 300],
+      "position": [
+        1340,
+        300
+      ],
       "parameters": {
-        "jsCode": "const { phone, currentModule } = $('Determinar módulo atual').item.json;\nconst row = $input.item.json;\n\n// Se módulo não foi encontrado no DB, retorna placeholder\nconst hasModuleData = row && row.title && !row.message;\n\nif (!hasModuleData) {\n  return [{\n    json: {\n      moduleNumber: currentModule,\n      title: `Módulo ${currentModule}`,\n      content: `Conteúdo do módulo ${currentModule} em preparação. Responda QUIZ para continuar.`,\n      hasQuiz: true\n    }\n  }];\n}\n\nconst questions = row.quiz_questions ?? [];\n\nreturn [{\n  json: {\n    moduleNumber: row.module_number,\n    title: row.title,\n    content: row.content_text ?? 'Conteúdo em preparação.',\n    hasQuiz: questions.length > 0\n  }\n}];"
+        "jsCode": "const { phone, currentModule } = $('Determinar módulo atual').item.json;\nconst row = $input.item.json;\n\n// Se módulo não foi encontrado no DB, retorna placeholder\nconst hasModuleData = row && row.title && !row.message;\n\nif (!hasModuleData) {\n  return [{\n    json: {\n      moduleNumber: currentModule,\n      title: `Módulo ${currentModule}`,\n      content: `Conteúdo do módulo ${currentModule} em preparação. Responda QUIZ para continuar.`,\n      hasQuiz: true,\n      quizQuestions: []\n    }\n  }];\n}\n\nconst questions = row.quiz_questions ?? [];\n\nreturn [{\n  json: {\n    moduleNumber: row.module_number,\n    title: row.title,\n    content: row.content_text ?? 'Conteúdo em preparação.',\n    hasQuiz: questions.length > 0,\n    quizQuestions: questions\n  }\n}];"
       }
     },
     {
@@ -88,7 +106,10 @@
       "name": "Responder BuilderBot",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [1560, 300],
+      "position": [
+        1560,
+        300
+      ],
       "parameters": {
         "respondWith": "json",
         "responseBody": "={{ JSON.stringify($json) }}"
@@ -97,23 +118,73 @@
   ],
   "connections": {
     "Webhook get-student-module": {
-      "main": [[{ "node": "Extrair telefone", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Extrair telefone",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Extrair telefone": {
-      "main": [[{ "node": "Criar ou atualizar aluno", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Criar ou atualizar aluno",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Criar ou atualizar aluno": {
-      "main": [[{ "node": "Determinar módulo atual", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Determinar módulo atual",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Determinar módulo atual": {
-      "main": [[{ "node": "Buscar conteúdo do módulo", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Buscar conteúdo do módulo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Buscar conteúdo do módulo": {
-      "main": [[{ "node": "Montar resposta", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Montar resposta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Montar resposta": {
-      "main": [[{ "node": "Responder BuilderBot", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Responder BuilderBot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
-  "settings": { "executionOrder": "v1" }
+  "settings": {
+    "executionOrder": "v1"
+  }
 }

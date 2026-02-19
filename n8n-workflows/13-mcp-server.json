@@ -1,0 +1,54 @@
+{
+    "name": "MCP Server: Kreativ Tools",
+    "nodes": [
+        {
+            "parameters": {
+                "path": "mcp/kreativ-tools",
+                "authentication": "headerAuth",
+                "tools": {
+                    "tool": [
+                        {
+                            "name": "request_tutor",
+                            "description": "Transfers conversation from bot to human tutor when student needs help. Returns success status and estimated wait time.",
+                            "workflowId": "9QKjYxL0FEAQdvIo",
+                            "responseMode": "lastNode"
+                        },
+                        {
+                            "name": "resume_bot",
+                            "description": "Resume bot conversation after human tutor ends support session. Updates status to bot and sends resume message.",
+                            "workflowId": "73NlfkAK3Zlb1dke",
+                            "responseMode": "lastNode"
+                        },
+                        {
+                            "name": "save_progress",
+                            "description": "Save student's module progress and quiz score (0-100). Updates database.",
+                            "workflowId": "FlYBNeM6KwKpuyro",
+                            "responseMode": "lastNode"
+                        },
+                        {
+                            "name": "emit_certificate",
+                            "description": "Generate certificate PDF when course is completed (all modules passed). Sends link via WhatsApp.",
+                            "workflowId": "vCeioL4GyOdXIYRi",
+                            "responseMode": "lastNode"
+                        }
+                    ]
+                }
+            },
+            "id": "mcp-server",
+            "name": "MCP Server Trigger",
+            "type": "n8n-nodes-base.mcpServerTrigger",
+            "typeVersion": 1,
+            "position": [
+                460,
+                300
+            ],
+            "credentials": {
+                "headerAuth": {
+                    "id": "mcp-header-auth-1",
+                    "name": "MCP Bearer Token"
+                }
+            }
+        }
+    ],
+    "connections": {}
+}

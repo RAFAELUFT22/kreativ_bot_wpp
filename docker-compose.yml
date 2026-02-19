@@ -192,6 +192,8 @@ services:
       EXECUTIONS_PROCESS: main
       N8N_METRICS: "false"
       N8N_PROXY_HOPS: 1
+      N8N_COMMUNITY_PACKAGES_ALLOW_TOOL_USAGE: "true"
+      N8N_AI_ENABLED: "true"
 
     volumes:
       - n8n_data:/home/node/.n8n
@@ -238,10 +240,10 @@ services:
       DB_USER: ${POSTGRES_USER}
       DB_PASSWORD: ${POSTGRES_PASSWORD}
       DB_NAME: ${POSTGRES_DB}
-      EVOLUTION_API_URL: http://evolution-api:8080
+      EVOLUTION_API_URL: http://kreativ_evolution:8080
       EVOLUTION_API_KEY: ${EVOLUTION_API_KEY}
-      EVOLUTION_INSTANCE: ${EVOLUTION_INSTANCE:-kreativ-bot}
-      N8N_WEBHOOK_BASE: http://n8n:5678/webhook
+      EVOLUTION_INSTANCE: ${EVOLUTION_INSTANCE:-europs}
+      N8N_WEBHOOK_BASE: http://kreativ_n8n:5678/webhook
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
       DEEPSEEK_BASE_URL: https://api.deepseek.com
       DEEPSEEK_MODEL: deepseek-chat

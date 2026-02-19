@@ -1,0 +1,101 @@
+{
+    "name": "MCP Tool: Resume Bot",
+    "nodes": [
+        {
+            "id": "trigger",
+            "name": "Start",
+            "type": "n8n-nodes-base.executeWorkflowTrigger",
+            "typeVersion": 1,
+            "position": [
+                240,
+                300
+            ]
+        },
+        {
+            "id": "pg-update",
+            "name": "Status -> Bot",
+            "type": "n8n-nodes-base.postgres",
+            "typeVersion": 2.6,
+            "position": [
+                460,
+                300
+            ],
+            "parameters": {
+                "operation": "executeQuery",
+                "query": "UPDATE students SET attendance_status = 'bot', updated_at = NOW() WHERE phone = '{{ $json.phone }}'",
+                "options": {}
+            },
+            "credentials": {
+                "postgres": {
+                    "id": "lJaeEy4CpHbhgMAp",
+                    "name": "Kreativ PostgreSQL"
+                }
+            }
+        },
+        {
+            "id": "http-resume",
+            "name": "BuilderBot Resume",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                680,
+                300
+            ],
+            "parameters": {
+                "method": "POST",
+                "url": "http://kreativ_builderbot:3008/api/resume",
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ phone: $json.phone, message: $json.message ?? 'Olá! O atendimento humano foi finalizado. Como posso ajudar?' }) }}"
+            }
+        },
+        {
+            "id": "response",
+            "name": "Retorno Tool",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                900,
+                300
+            ],
+            "parameters": {
+                "jsCode": "return [{ json: { success: true } }];"
+            }
+        }
+    ],
+    "connections": {
+        "Start": {
+            "main": [
+                [
+                    {
+                        "node": "Status -> Bot",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Status -> Bot": {
+            "main": [
+                [
+                    {
+                        "node": "BuilderBot Resume",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "BuilderBot Resume": {
+            "main": [
+                [
+                    {
+                        "node": "Retorno Tool",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

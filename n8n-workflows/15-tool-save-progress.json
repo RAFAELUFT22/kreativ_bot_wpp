@@ -1,0 +1,73 @@
+{
+    "name": "MCP Tool: Save Progress",
+    "nodes": [
+        {
+            "id": "trigger",
+            "name": "Start",
+            "type": "n8n-nodes-base.executeWorkflowTrigger",
+            "typeVersion": 1,
+            "position": [
+                240,
+                300
+            ]
+        },
+        {
+            "id": "pg-update",
+            "name": "Atualizar DB",
+            "type": "n8n-nodes-base.postgres",
+            "typeVersion": 2.6,
+            "position": [
+                460,
+                300
+            ],
+            "parameters": {
+                "operation": "executeQuery",
+                "query": "UPDATE students \nSET \n  scores = scores || jsonb_build_object('module_{{ $json.moduleId }}', {{ $json.score }}),\n  completed_modules = CASE \n    WHEN NOT ({{ $json.moduleId }} = ANY(completed_modules))\n    THEN array_append(completed_modules, {{ $json.moduleId }})\n    ELSE completed_modules\n  END,\n  current_module = CASE WHEN {{ $json.completed ? $json.moduleId + 1 : $json.moduleId }} > current_module THEN {{ $json.completed ? $json.moduleId + 1 : $json.moduleId }} ELSE current_module END,\n  updated_at = NOW()\nWHERE phone = '{{ $json.phone }}'",
+                "options": {}
+            },
+            "credentials": {
+                "postgres": {
+                    "id": "lJaeEy4CpHbhgMAp",
+                    "name": "Kreativ PostgreSQL"
+                }
+            }
+        },
+        {
+            "id": "response",
+            "name": "Retorno Tool",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                680,
+                300
+            ],
+            "parameters": {
+                "jsCode": "return [{ json: { success: true, saved: true } }];"
+            }
+        }
+    ],
+    "connections": {
+        "Start": {
+            "main": [
+                [
+                    {
+                        "node": "Atualizar DB",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Atualizar DB": {
+            "main": [
+                [
+                    {
+                        "node": "Retorno Tool",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

@@ -1,0 +1,11 @@
+[
+    {
+        "id": "mcp-header-auth-1",
+        "name": "MCP Bearer Token",
+        "type": "headerAuth",
+        "data": {
+            "name": "Authorization",
+            "value": "Bearer 4b51112e8901d595af404ecaad1de8ad0a7cba2096836714835a6928c5d7f483"
+        }
+    }
+]

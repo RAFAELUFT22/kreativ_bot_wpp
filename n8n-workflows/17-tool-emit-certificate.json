@@ -1,0 +1,165 @@
+{
+    "name": "MCP Tool: Emit Certificate",
+    "nodes": [
+        {
+            "id": "trigger",
+            "name": "Start",
+            "type": "n8n-nodes-base.executeWorkflowTrigger",
+            "typeVersion": 1,
+            "position": [
+                240,
+                300
+            ]
+        },
+        {
+            "id": "pg-info",
+            "name": "Dados Aluno",
+            "type": "n8n-nodes-base.postgres",
+            "typeVersion": 2.6,
+            "position": [
+                460,
+                300
+            ],
+            "parameters": {
+                "operation": "executeQuery",
+                "query": "SELECT name FROM students WHERE phone = '{{ $json.phone }}' LIMIT 1",
+                "options": {}
+            },
+            "credentials": {
+                "postgres": {
+                    "id": "lJaeEy4CpHbhgMAp",
+                    "name": "Kreativ PostgreSQL"
+                }
+            }
+        },
+        {
+            "id": "code-gen",
+            "name": "Gerar HTML",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                680,
+                300
+            ],
+            "parameters": {
+                "jsCode": "const studentName = $('Dados Aluno').item.json.name ?? $json.studentName ?? $json.phone;\nconst phone = $json.phone;\nconst courseName = $json.courseName ?? 'Extensão';\nconst certId = 'KRV-' + Math.random().toString(36).substring(2,10).toUpperCase();\nconst date = new Date().toLocaleDateString('pt-BR');\n\nconst html = `<!DOCTYPE html><html><body style='text-align:center;padding:50px;'><h1 style='color:#004d40'>Certificado</h1><p>Certificamos que <strong>${studentName}</strong> concluiu o curso <strong>${courseName}</strong> em ${date}.</p><p>Código: ${certId}</p></body></html>`;\n\nconst certPortalUrl = `https://portal.extensionista.site/certificado/${certId}`;\n\nreturn [{ json: { html, certId, certPortalUrl, phone, studentName } }];"
+            }
+        },
+        {
+            "id": "minio-upload",
+            "name": "Upload MinIO",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                900,
+                300
+            ],
+            "parameters": {
+                "method": "PUT",
+                "url": "=http://kreativ_minio:9000/certificados/{{$json.certId}}.html",
+                "sendBody": true,
+                "specifyBody": "raw",
+                "rawBody": "={{$json.html}}",
+                "options": {
+                    "allowUnauthorizedCerts": true
+                }
+            }
+        },
+        {
+            "id": "send-wapp",
+            "name": "Enviar WhatsApp",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                1120,
+                300
+            ],
+            "parameters": {
+                "method": "POST",
+                "url": "http://kreativ_evolution:8080/message/sendText/europs",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "apikey",
+                            "value": "EXr5OuEE2sBMbRo94LtWQfofvEF1gHUM"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ number: $('Gerar HTML').item.json.phone, text: '🎓 *Parabéns pelo Certificado!*\\n\\nAcesse aqui: ' + $('Gerar HTML').item.json.certPortalUrl }) }}"
+            }
+        },
+        {
+            "id": "response",
+            "name": "Retorno Tool",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1340,
+                300
+            ],
+            "parameters": {
+                "jsCode": "return [{ json: { success: true, url: $('Gerar HTML').item.json.certPortalUrl } }];"
+            }
+        }
+    ],
+    "connections": {
+        "Start": {
+            "main": [
+                [
+                    {
+                        "node": "Dados Aluno",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Dados Aluno": {
+            "main": [
+                [
+                    {
+                        "node": "Gerar HTML",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Gerar HTML": {
+            "main": [
+                [
+                    {
+                        "node": "Upload MinIO",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Upload MinIO": {
+            "main": [
+                [
+                    {
+                        "node": "Enviar WhatsApp",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Enviar WhatsApp": {
+            "main": [
+                [
+                    {
+                        "node": "Retorno Tool",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

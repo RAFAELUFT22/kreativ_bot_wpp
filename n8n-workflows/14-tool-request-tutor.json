@@ -1,0 +1,217 @@
+{
+    "name": "MCP Tool: Request Tutor",
+    "nodes": [
+        {
+            "id": "trigger",
+            "name": "Start",
+            "type": "n8n-nodes-base.executeWorkflowTrigger",
+            "typeVersion": 1,
+            "position": [
+                240,
+                300
+            ]
+        },
+        {
+            "id": "pg-pause-bot",
+            "name": "Pausar bot e criar sessão",
+            "type": "n8n-nodes-base.postgres",
+            "typeVersion": 2.6,
+            "position": [
+                460,
+                300
+            ],
+            "parameters": {
+                "operation": "executeQuery",
+                "query": "WITH upserted AS (\n  INSERT INTO students (phone, attendance_status)\n  VALUES ('{{ $json.phone }}', 'human')\n  ON CONFLICT (phone) DO UPDATE\n    SET attendance_status = 'human', updated_at = NOW()\n  RETURNING id\n)\nINSERT INTO support_sessions (student_id, reason)\nSELECT id, '{{ ($json.reason ?? 'Solicitação via bot') | replace(\"'\", \"''\") }}'\nFROM upserted\nRETURNING id",
+                "options": {}
+            },
+            "credentials": {
+                "postgres": {
+                    "id": "lJaeEy4CpHbhgMAp",
+                    "name": "Kreativ PostgreSQL"
+                }
+            }
+        },
+        {
+            "id": "http-search-contact",
+            "name": "Buscar Contato Chatwoot",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                680,
+                300
+            ],
+            "parameters": {
+                "method": "GET",
+                "url": "http://chatwoot-app:3000/api/v1/accounts/2/contacts/search",
+                "sendQuery": true,
+                "queryParameters": {
+                    "parameters": [
+                        {
+                            "name": "q",
+                            "value": "={{ $('Start').item.json.phone }}"
+                        }
+                    ]
+                },
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "api_access_token",
+                            "value": "hh5bHLwTRyKoqZzAvaPUUm5v"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "id": "code-contact-id",
+            "name": "Extrair ID Contato",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                900,
+                300
+            ],
+            "parameters": {
+                "jsCode": "const payload = $input.item.json.payload;\nlet contactId = null;\nif (payload && payload.length > 0) {\n  contactId = payload[0].id;\n}\nreturn [{ json: { contactId } }];"
+            }
+        },
+        {
+            "id": "http-create-conv",
+            "name": "Criar Conversa Inbox 2",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                1120,
+                300
+            ],
+            "parameters": {
+                "method": "POST",
+                "url": "http://chatwoot-app:3000/api/v1/accounts/2/conversations",
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ source_id: $json.contactId, inbox_id: 2, status: 'open' }) }}",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "api_access_token",
+                            "value": "hh5bHLwTRyKoqZzAvaPUUm5v"
+                        }
+                    ]
+                },
+                "options": {
+                    "ignoreResponseCode": true
+                }
+            }
+        },
+        {
+            "id": "http-notify-evolution",
+            "name": "Notificar Tutor (Evolution)",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                1340,
+                300
+            ],
+            "parameters": {
+                "method": "POST",
+                "url": "http://kreativ_evolution:8080/message/sendText/europs",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "apikey",
+                            "value": "EXr5OuEE2sBMbRo94LtWQfofvEF1gHUM"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ number: '120363198506827018@g.us', text: '🚨 *SOLICITAÇÃO DE TUTORIA*\\n\\nAluno: ' + $('Start').item.json.phone + '\\nMotivo: ' + $('Start').item.json.reason + '\\nContexto: ' + $('Start').item.json.context }) }}"
+            }
+        },
+        {
+            "id": "response",
+            "name": "Retorno Tool",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1560,
+                300
+            ],
+            "parameters": {
+                "jsCode": "return [{ json: { success: true, tutorName: 'Equipe Kreativ', estimatedWait: '5-10 min' } }];"
+            }
+        }
+    ],
+    "connections": {
+        "Start": {
+            "main": [
+                [
+                    {
+                        "node": "Pausar bot e criar sessão",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Pausar bot e criar sessão": {
+            "main": [
+                [
+                    {
+                        "node": "Buscar Contato Chatwoot",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Buscar Contato Chatwoot": {
+            "main": [
+                [
+                    {
+                        "node": "Extrair ID Contato",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Extrair ID Contato": {
+            "main": [
+                [
+                    {
+                        "node": "Criar Conversa Inbox 2",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Criar Conversa Inbox 2": {
+            "main": [
+                [
+                    {
+                        "node": "Notificar Tutor (Evolution)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Notificar Tutor (Evolution)": {
+            "main": [
+                [
+                    {
+                        "node": "Retorno Tool",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}
