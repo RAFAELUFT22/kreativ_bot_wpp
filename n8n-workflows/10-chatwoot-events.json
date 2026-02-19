@@ -1,5 +1,5 @@
 {
-  "name": "Kreativ: Chatwoot → Retomar Bot",
+  "name": "Kreativ: Chatwoot → Retomar Bot & Treinamento",
   "nodes": [
     {
       "id": "cw-wh",
@@ -19,7 +19,7 @@
     },
     {
       "parameters": {
-        "jsCode": "\nconst body = $input.item.json.body || $input.item.json;\nconst event = body.event;\nconst conv = body.conversation || {};\nconst status = conv.status;\nconst phone = (conv.meta?.sender?.phone_number || '').replace(/\\D/g,'');\nconst convId = conv.id;\nconst assignee = conv.meta?.assignee;\n\nreturn [{ json: { event, status, phone, convId, assignee, raw: body } }];\n"
+        "jsCode": "\nconst body = $input.item.json.body || $input.item.json;\nconst event = body.event;\nconst conv = body.conversation || {};\nconst status = conv.status;\nconst phone = (conv.meta?.sender?.phone_number || '').replace(/\\D/g,'');\nconst convId = conv.id;\nconst assignee = conv.meta?.assignee;\nconst messageContent = body.content;\nconst messageType = body.message_type;\n\nreturn [{ json: { event, status, phone, convId, assignee, messageContent, messageType, raw: body } }];\n"
       },
       "id": "cw-extract",
       "name": "Extrair Evento",
@@ -90,6 +90,39 @@
               },
               "renameOutput": true,
               "outputKey": "Reaberta"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "r4",
+                    "leftValue": "={{ $json.event }}",
+                    "rightValue": "message_created",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  },
+                  {
+                    "id": "r5",
+                    "leftValue": "={{ $json.messageType }}",
+                    "rightValue": "outgoing",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Treinamento"
             }
           ]
         },
@@ -108,8 +141,66 @@
     },
     {
       "parameters": {
+        "method": "GET",
+        "url": "http://kreativ_chatwoot_app:3000/api/v1/accounts/2/conversations/{{$json.convId}}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "hh5bHLwTRyKoqZzAvaPUUm5v"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-history",
+      "name": "Buscar Histórico",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        912,
+        416
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const messages = $json.payload || [];\n// Pegar a última mensagem do aluno (incoming)\nconst lastIncoming = messages.find(m => m.message_type === 'incoming');\nconst currentOutgoing = $('Extrair Evento').item.json.messageContent;\n\nif (lastIncoming && currentOutgoing) {\n  return [{ json: { \n    question: lastIncoming.content, \n    answer: currentOutgoing,\n    phone: $('Extrair Evento').item.json.phone\n  } }];\n}\nreturn [];"
+      },
+      "id": "extract-pair",
+      "name": "Extrair Par Q&A",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        416
+      ]
+    },
+    {
+      "parameters": {
         "operation": "executeQuery",
-        "query": "UPDATE students SET attendance_status='bot', updated_at=NOW() WHERE phone = '{{ $json.phone }}' RETURNING id, phone, name, current_module",
+        "query": "={{ \"INSERT INTO training_memory (question, answer, student_phone) VALUES ('\" + $json.question.replace(/'/g, \"''\") + \"', '\" + $json.answer.replace(/'/g, \"''\") + \"', '\" + $json.phone + \"');\" }}",
+        "options": {}
+      },
+      "id": "save-memory",
+      "name": "Salvar Memória Treino",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1328,
+        416
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "lJaeEy4CpHbhgMAp",
+          "name": "Kreativ PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ \"BEGIN; UPDATE students SET attendance_status='bot', updated_at=NOW() WHERE phone = '\" + $json.phone + \"'; INSERT INTO handoff_control (phone, status) VALUES ('\" + $json.phone + \"', 'bot') ON CONFLICT (phone) DO UPDATE SET status = 'bot', last_handoff = NOW(); COMMIT;\" }}",
         "options": {}
       },
       "id": "cw-resume",
@@ -129,76 +220,69 @@
       "continueOnFail": true
     },
     {
-      "parameters": {
-        "method": "POST",
-        "url": "http://kreativ_chatwoot_app:3000/api/v1/accounts/2/conversations/{{$json.convId}}/messages",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "api_access_token",
-              "value": "hh5bHLwTRyKoqZzAvaPUUm5v"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ content: \"✅ Atendimento encerrado. O bot foi reativado automaticamente para continuar o aprendizado do aluno.\", message_type: \"outgoing\", private: true }) }}",
-        "options": {}
-      },
-      "id": "cw-note",
-      "name": "Nota Interna Chatwoot",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "id": "rd-set-bot",
+      "name": "Redis: Set Bot",
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
       "position": [
-        1120,
+        1140,
         208
-      ]
+      ],
+      "parameters": {
+        "operation": "set",
+        "key": "={{ \"session:\" + $node[\"Extrair Evento\"].json.phone + \":status\" }}",
+        "value": "{\"attendance_status\": \"bot\", \"current_module\": 1}",
+        "expire": 86400
+      },
+      "credentials": {
+        "redis": {
+          "id": "pqD1PcyYhsWm4i3a",
+          "name": "Kreativ Redis"
+        }
+      }
     },
     {
+      "id": "cw-handoff",
+      "name": "Handoff no DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        912,
+        304
+      ],
       "parameters": {
-        "method": "POST",
-        "url": "http://kreativ_n8n:5678/webhook/update-chatwoot-label",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  phone: $('Extrair Evento').item.json.phone,\n  label: 'em-andamento-m' + ($('Retomar Bot no DB').item.json.current_module || 1)\n}) }}",
+        "operation": "executeQuery",
+        "query": "={{ \"UPDATE students SET attendance_status='human', updated_at=NOW() WHERE phone = '\" + $json.phone + \"';\" }}",
         "options": {}
       },
-      "id": "cw-label",
-      "name": "Atualizar Label",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        1344,
-        208
-      ]
+      "credentials": {
+        "postgres": {
+          "id": "lJaeEy4CpHbhgMAp",
+          "name": "Kreativ PostgreSQL"
+        }
+      }
     },
     {
-      "parameters": {
-        "method": "POST",
-        "url": "http://kreativ_evolution:8080/message/sendText/europs",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "apikey",
-              "value": "EXr5OuEE2sBMbRo94LtWQfofvEF1gHUM"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ number: $(\"Extrair Evento\").item.json.phone, text: \"Olá! 👋 Seu atendimento com o tutor foi encerrado. Estou de volta para continuar seu aprendizado!\\n\\nResponda *CONTINUAR* para retomar do ponto onde parou, ou *MENU* para ver as opções.\" }) }}",
-        "options": {}
-      },
-      "id": "cw-msg",
-      "name": "Mensagem Retomada WhatsApp",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "id": "rd-set-human",
+      "name": "Redis: Set Human",
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
       "position": [
-        1568,
-        208
-      ]
+        1140,
+        304
+      ],
+      "parameters": {
+        "operation": "set",
+        "key": "={{ \"session:\" + $node[\"Extrair Evento\"].json.phone + \":status\" }}",
+        "value": "{\"attendance_status\": \"human\", \"current_module\": 1}",
+        "expire": 86400
+      },
+      "credentials": {
+        "redis": {
+          "id": "pqD1PcyYhsWm4i3a",
+          "name": "Kreativ Redis"
+        }
+      }
     }
   ],
   "connections": {
@@ -235,7 +319,14 @@
         ],
         [
           {
-            "node": "Retomar Bot no DB",
+            "node": "Handoff no DB",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Buscar Histórico",
             "type": "main",
             "index": 0
           }
@@ -246,29 +337,40 @@
       "main": [
         [
           {
-            "node": "Nota Interna Chatwoot",
+            "node": "Redis: Set Bot",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Nota Interna Chatwoot": {
+    "Handoff no DB": {
       "main": [
         [
           {
-            "node": "Atualizar Label",
+            "node": "Redis: Set Human",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Atualizar Label": {
+    "Buscar Histórico": {
       "main": [
         [
           {
-            "node": "Mensagem Retomada WhatsApp",
+            "node": "Extrair Par Q&A",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extrair Par Q&A": {
+      "main": [
+        [
+          {
+            "node": "Salvar Memória Treino",
             "type": "main",
             "index": 0
           }
@@ -277,10 +379,6 @@
     }
   },
   "settings": {
-    "executionOrder": "v1",
-    "saveManualExecutions": true,
-    "callerPolicy": "workflowsFromSameOwner",
-    "availableInMCP": false
-  },
-  "staticData": null
+    "executionOrder": "v1"
+  }
 }

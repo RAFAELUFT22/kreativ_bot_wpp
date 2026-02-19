@@ -39,7 +39,7 @@
         300
       ],
       "parameters": {
-        "jsCode": "const input = $input.item.json;\nconst phone = String(input.phone ?? input.body?.phone ?? '').replace(/\\D/g, '');\nconst moduleNumber = parseInt(String(input.moduleNumber ?? input.body?.moduleNumber ?? '0'), 10);\nconst points = parseInt(String(input.points ?? input.body?.points ?? '20'), 10);\nconst tag = input.tag ?? input.body?.tag ?? null;\nreturn [{ json: { body: { phone, moduleNumber, points, tag } } }];"
+        "jsCode": "const input = $input.item.json;\nconst phone = String(input.phone ?? input.body?.phone ?? '').replace(/\\D/g, '');\nconst moduleNumber = parseInt(String(input.moduleNumber ?? input.moduleId ?? input.body?.moduleNumber ?? '0'), 10);\nconst points = parseInt(String(input.points ?? input.body?.points ?? '20'), 10);\nconst tag = input.tag ?? input.body?.tag ?? null;\nreturn [{ json: { body: { phone, moduleNumber, points, tag } } }];"
       }
     },
     {

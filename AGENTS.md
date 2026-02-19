@@ -9,146 +9,108 @@
 
 **Kreativ Educação** — sistema de educação conversacional via WhatsApp.
 
-Alunos recebem módulos de conteúdo e quizzes diretamente no WhatsApp.
-Um bot (BuilderBot) conduz a trilha de aprendizagem. Quando o aluno pede ajuda,
-é transferido para um tutor humano (Chatwoot). Tudo orquestrado via N8N.
+Alunos recebem módulos de conteúdo e avaliações generativas diretamente no WhatsApp.
+Um bot (BuilderBot) e orquestradores IA (N8N + DeepSeek) conduzem a trilha. Quando o aluno pede ajuda,
+é transferido para um tutor humano (Chatwoot).
 
-**VPS**: Hostinger, IP `187.77.46.37`, 7.8GB RAM, 1 vCPU (upgrade realizado)
+**VPS**: Hostinger, IP `187.77.46.37`, 7.8GB RAM, 1 vCPU
 **Domínio principal**: `extensionista.site`
 **Painel de deploy**: Coolify em `http://187.77.46.37:8000`
 
 ---
 
-## 2. Arquitetura Atual (Estado em 19/02/2026)
+## 2. Arquitetura Atual (Estado em 19/02/2026 - Pós-Otimização Redis)
 
 ```
-WhatsApp ─► Evolution API ─► N8N Router ─► BuilderBot ─► responde aluno
-                                  │
-                                  ├─► DeepSeek (mensagens livres/fallback)
-                                  └─► Chatwoot (quando attendance_status='human')
+WhatsApp ─► Evolution API ─► N8N Router (Redis Cache/Limit) ──► BuilderBot ──► responde aluno
+                                     │                           │
+                                     ├─► AI Router V3 (Redis) ───┤
+                                     │      (Sliding Window)     │
+                                     └─► Chatwoot (se 'human') ──┘
 ```
 
 ### Serviços em produção (Docker Compose)
 
-| Serviço | Container | Porta interna | URL externa |
+| Serviço | Container | Porta interna | Papel Crítico |
 |---|---|---|---|
-| PostgreSQL + pgvector | `kreativ_postgres` | 5432 | interno |
-| Redis | `kreativ_redis` | 6379 | interno |
-| Evolution API v2 | `kreativ_evolution` | 8080 | https://evolution.extensionista.site |
-| N8N | `kreativ_n8n` | 5678 | https://n8n.extensionista.site |
-| BuilderBot | `kreativ_builderbot` | 3008 | interno (chamado pelo N8N) |
-| MinIO | `kreativ_minio` | 9000/9001 | https://files.extensionista.site |
-| Chatwoot | `kreativ_chatwoot_app` | 3000 | https://suporte.extensionista.site |
-| ToolJet EE | `kreativ_tooljet` | 3000 | https://admin.extensionista.site |
-| Metabase | `kreativ_metabase` | 3000 | https://dash.extensionista.site |
-| Portal do Aluno (Next.js) | `kreativ_portal` | 3001 | https://portal.extensionista.site |
-
-> **TODOS os serviços ativos** e operacionais.
+| PostgreSQL | `kreativ_postgres` | 5432 | Fonte da Verdade (Long-Term Memory) |
+| Redis | `kreativ_redis` | 6379 | Sessão, Cache de Estado e Rate Limit (RAM) |
+| Evolution API | `kreativ_evolution` | 8080 | Gateway WhatsApp |
+| N8N | `kreativ_n8n` | 5678 | Orquestrador de Agentes e Webhooks |
+| BuilderBot | `kreativ_builderbot` | 3008 | Relay de Mensagens e Fluxos Estruturados |
 
 ---
 
-## 3. Fluxo de Mensagem Detalhado
+## 3. Fluxo de Mensagem & Otimizações Recentes
 
-```
-1. Aluno manda msg no WhatsApp
-2. Evolution API recebe (instância: europs)
-3. Evolution API dispara webhook → N8N Router (http://n8n:5678/webhook/whatsapp)
-4. N8N Router:
-   a. Consulta students.attendance_status e current_module no PostgreSQL
-   b. Se attendance_status='human' → ignora (Chatwoot cuida)
-   c. Se keyword em BUILDERBOT_KEYWORDS ou current_module>0 → BuilderBot
-   d. Caso contrário → DeepSeek (resposta IA livre)
-5. BuilderBot recebe em POST /webhook
-6. BuilderBot processa flow, chama N8N webhooks para dados (get-student-module, etc.)
-```
+### Estratégia de Cache (Redis)
+1. **WhatsApp Router (`WbDAVxu7OwCTttRF`)**:
+   - Antes de tocar no PostgreSQL, verifica `session:{phone}:status` no Redis.
+   - Aplica **Rate Limit** de 3 segundos por mensagem via Redis `INCR`.
+   - Se o cache expirar (24h), busca no DB e repopula o Redis.
 
-### Atenção: URLs Internas (DNS do Docker)
-- **Evolution -> Chatwoot**: `http://chatwoot-app:3000`
-- **Evolution -> N8N**: `http://n8n:5678`
-- **N8N -> Chatwoot**: `http://chatwoot-app:3000`
-- **N8N -> BuilderBot**: `http://kreativ_builderbot:3008`
-- **NENHUM IP FIXO (10.0.x.x) deve ser usado**, pois mudam no restart.
+2. **AI Router V3 (`5caL67H387euTxan`)**:
+   - Mantém uma **Janela Deslizante de Memória** (últimas 20 mensagens) no Redis (`chat_history:{phone}`).
+   - Combina essa memória curta com exemplos de tom de voz (RLHF) do PostgreSQL.
+
+3. **Chatwoot Events (`y92mEtPP4nK1p037`)**:
+   - Ao resolver um ticket, o N8N atualiza simultaneamente o PostgreSQL (`attendance_status='bot'`) e o Redis para resposta instantânea.
 
 ---
 
-## 4. Variáveis de Ambiente Críticas
+## 4. Avaliação Generativa (Pivot de Arquitetura)
 
-Arquivo: `/root/ideias_app/.env` (não commitado)
-
-```
-# PostgreSQL hostname: kreativ_postgres
-# Evolution: EVOLUTION_INSTANCE=europs
-# DeepSeek: DEEPSEEK_API_KEY=sk-... (Model: deepseek-chat)
-# Chatwoot: CHATWOOT_URL=http://chatwoot-app:3000 (interno para API)
-# N8N: N8N_API_KEY=...
-```
+**Antigo**: Quizzes determinísticos (Múltipla escolha A, B, C).
+**Novo**: A IA atua como Tutor e Avaliador.
+- Tabela `modules`: Coluna `evaluation_rubric` (TEXT) substituiu `quiz_questions`.
+- O BuilderBot delega a conversa para a IA, que avalia se a resposta do aluno atende à rubrica.
+- A aprovação é feita via Function Calling (ou ferramenta MCP) disparando o webhook `save-progress`.
 
 ---
 
-## 5. Workflows N8N Ativos
+## 5. Workflows N8N Ativos (Principais)
 
 | ID | Nome | Webhook Path | Função |
 |---|---|---|---|
-| `oeM02qpKdIGFbGQX` | WhatsApp Router | `/webhook/whatsapp` | Roteador principal (DeepSeek/BuilderBot) |
-| `oDg2TF7C0ne12fFg` | get-student-module | `/webhook/get-student-module` | Busca conteúdo e quiz |
-| `sKXwOHDHjEadXQD0` | submit-quiz-answer | `/webhook/submit-quiz-answer` | Valida quiz e chama lead-scoring |
-| `04ZmheF5PCJr52aI` | request-human-support | `/webhook/request-human-support` | Cria conversa no Chatwoot |
-| `9SQfSnUNWOc3SKFT` | Atualizar Label Chatwoot | `/webhook/update-chatwoot-label` | Sync etiquetas (ex: em-andamento-m2) |
-| `zOSTJqpGI87IKmkm` | Chatwoot -> Retomar Bot | `/webhook/chatwoot-events` | Quando tutor resolve, volta para bot |
-| `cj1N7ZPVoDxlI7Sk` | Lead Scoring | `/webhook/module-completed` | Calcula score e envia parabéns |
-| `yKcjMnH87VsO5n9V` | Emitir Certificado | `/webhook/emit-certificate` | Gera HTML e link (sem Puppeteer) |
+| `WbDAVxu7OwCTttRF` | WhatsApp Router | `/webhook/whatsapp` | Roteador com Redis (Cache + Limit) |
+| `5caL67H387euTxan` | AI Router V3 | `/webhook/ai-tutor-v3` | Tutor com Memória no Redis |
+| `oDg2TF7C0ne12fFg` | get-student-module | `/webhook/get-student-module` | Retorna conteúdo + rubrica |
+| `tULwBOlfOnCuk586` | Save Progress | `/webhook/save-progress` | Salva nota e libera próximo módulo |
+| `y92mEtPP4nK1p037` | Chatwoot Events | `/webhook/chatwoot-events` | Sync de estado Bot/Human |
+| `cj1N7ZPVoDxlI7Sk` | Lead Scoring | `/webhook/lead-scoring` | Pontuação de engajamento no CRM |
 
 ---
 
-## 6. Banco de Dados
+## 6. Banco de Dados & Comandos Úteis
 
 **Conectar**: `docker exec -it kreativ_postgres psql -U kreativ_user -d kreativ_edu`
 
-**Reset de aluno para teste**:
+**Limpar histórico de chat (Redis)**:
+`docker exec kreativ_redis redis-cli DEL chat_history:{phone}`
+
+**Reset de aluno**:
 ```sql
-UPDATE students SET
-  current_module = 1,
-  completed_modules = '{}',
-  scores = '{}',
-  lead_score = 0,
-  attendance_status = 'bot',
-  updated_at = NOW()
-WHERE phone = 'PHONE';
+UPDATE students SET current_module = 1, completed_modules = '{}', lead_score = 0, attendance_status = 'bot' WHERE phone = 'PHONE';
 ```
 
 ---
 
-## 7. Status das Fases (Roadmap)
+## 7. Status do Roadmap
 
-- [x] **Fase 1-3**: Infra base, BuilderBot, Fluxos iniciais
-- [x] **Fase 7**: ToolJet (Admin) - Online
-- [x] **Fase 8**: Chatwoot (Suporte) - Online e Integrado
-- [x] **Fase 9**: Lead Scoring - Online
-- [x] **Fase 10**: Certificados (HTML Template) - Online
-- [x] **Fase 11**: Metabase (Dashboards) - Online
-- [x] **Fase 12**: Portal do Aluno (Next.js) - Online em `portal.extensionista.site`
-
-**Próximos Passos (Futuro)**:
-- [ ] RAGFlow (Material Didático com IA) - Requer setup específico
-- [ ] Conteúdo real dos módulos (popular DB)
-- [ ] Personalização fina dos dashboards Metabase
+- [x] **Infra & Integrações Base** (Evolution, Chatwoot, N8N, Postgres)
+- [x] **Redis Optimization Layer** (Rate limit, Session caching)
+- [x] **Generative Evaluation** (Rubricas IA em vez de Quizzes)
+- [x] **Sliding Window Memory** (Contexto de chat persistente via Redis)
+- [ ] **RAGFlow** (Base de conhecimento para material didático denso)
+- [ ] **ToolJet Admin V2** (Interface para edição de rubricas)
 
 ---
 
-## 8. Como Fazer Deploy
+## 8. Guia de Manutenção (Para o Próximo Agente)
 
-**GitHub Push**:
-```bash
-git add .
-git commit -m "feat: ..."
-git push origin main
-```
-(Token já configurado no sistema)
-
-**N8N Workflows**:
-- Use script `push_workflows.js` no container se editar JSONs locais.
-- `docker exec ... node /home/node/push_workflows.js`
-
-**BuilderBot / Portal**:
-- `docker compose build nome_servico`
-- `docker compose up -d nome_servico`
+1. **Deploy de Workflows**: Ao alterar JSONs locais, use:
+   `docker exec -e N8N_API_KEY="..." kreativ_n8n node /tmp/wf_p0/deploy.js`
+2. **Logs**:
+   - N8N: `docker logs kreativ_n8n`
+   - BuilderBot: `docker logs kreativ_builderbot`
+3. **Persistência**: Sempre que adicionar uma nova lógica no N8N que mude o estado do aluno, atualize o cache do Redis para evitar inconsistências.

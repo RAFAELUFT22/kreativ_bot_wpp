@@ -7,16 +7,37 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
-        240,
+        100,
         300
       ],
       "parameters": {
         "httpMethod": "POST",
         "path": "request-human-support",
-        "responseMode": "responseNode",
+        "responseMode": "onReceived",
         "options": {}
       },
       "webhookId": "kreativ-request-human-support"
+    },
+    {
+      "id": "pg-log-support-received",
+      "name": "Log Support Received",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        300,
+        300
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ \"INSERT INTO debug_log (message) VALUES ('Support WF Received. Phone: \" + ($json.body.phone ?? 'MISSING') + \" Reason: \" + ($json.body.reason ?? 'MISSING') + \"')\" }}",
+        "options": {}
+      },
+      "credentials": {
+        "postgres": {
+          "id": "lJaeEy4CpHbhgMAp",
+          "name": "Kreativ PostgreSQL"
+        }
+      }
     },
     {
       "id": "pg-pause-bot",
@@ -24,12 +45,12 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        460,
+        500,
         300
       ],
       "parameters": {
         "operation": "executeQuery",
-        "query": "WITH upserted AS (\n  INSERT INTO students (phone, attendance_status)\n  VALUES ('{{ $json.body.phone }}', 'human')\n  ON CONFLICT (phone) DO UPDATE\n    SET attendance_status = 'human', updated_at = NOW()\n  RETURNING id\n)\nINSERT INTO support_sessions (student_id, reason)\nSELECT id, '{{ ($json.body.reason ?? 'Solicitação via bot') | replace(\"'\", \"''\") }}'\nFROM upserted\nRETURNING id",
+        "query": "WITH upserted AS (\n  INSERT INTO students (phone, attendance_status)\n  VALUES ('{{ $('Webhook request-human-support').first().json.body.phone }}', 'human')\n  ON CONFLICT (phone) DO UPDATE\n    SET attendance_status = 'human', updated_at = NOW()\n  RETURNING id\n)\nINSERT INTO support_sessions (student_id, reason)\nSELECT id, '{{ ($('Webhook request-human-support').first().json.body.reason ?? 'Solicitação via bot') | replace(\"'\", \"''\") }}'\nFROM upserted\nRETURNING id",
         "options": {}
       },
       "credentials": {
@@ -46,7 +67,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        680,
+        700,
         300
       ],
       "parameters": {
@@ -57,7 +78,7 @@
           "parameters": [
             {
               "name": "q",
-              "value": "={{ $('Webhook request-human-support').item.json.body.phone }}"
+              "value": "={{ $('Webhook request-human-support').first().json.body.phone }}"
             }
           ]
         },
@@ -112,7 +133,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1120,
+        1100,
         400
       ],
       "parameters": {
@@ -120,7 +141,7 @@
         "url": "http://chatwoot-app:3000/api/v1/accounts/2/contacts",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ name: $('Webhook request-human-support').item.json.body.phone, phone_number: $('Webhook request-human-support').item.json.body.phone }) }}",
+        "jsonBody": "={{ JSON.stringify({ name: $('Webhook request-human-support').first().json.body.phone, phone_number: $('Webhook request-human-support').first().json.body.phone }) }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -138,11 +159,11 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1340,
+        1300,
         300
       ],
       "parameters": {
-        "jsCode": "const input = $input.item.json;\nlet contactId = null;\n\n// Case 1: Input comes from 'Criar Contato' (newly created)\nif (input.payload && input.payload.contact) {\n  contactId = input.payload.contact.id;\n}\n// Case 2: Input comes from 'Contato existe?' (existing contact search result)\nelse if (input.payload && Array.isArray(input.payload) && input.payload.length > 0) {\n  contactId = input.payload[0].id;\n}\n\nreturn [{ json: { contactId } }];"
+        "jsCode": "const input = $input.item.json;\nlet contactId = null;\nif (input.payload && input.payload.contact) {\n  contactId = input.payload.contact.id;\n}\nelse if (input.payload && Array.isArray(input.payload) && input.payload.length > 0) {\n  contactId = input.payload[0].id;\n}\nreturn [{ json: { contactId } }];"
       }
     },
     {
@@ -151,7 +172,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1560,
+        1500,
         300
       ],
       "parameters": {
@@ -177,17 +198,11 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        1780,
+        1700,
         300
       ],
       "parameters": {
         "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 1
-          },
           "conditions": [
             {
               "id": "c1",
@@ -198,10 +213,8 @@
                 "operation": "true"
               }
             }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
+          ]
+        }
       }
     },
     {
@@ -210,7 +223,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2000,
+        1900,
         400
       ],
       "parameters": {
@@ -218,7 +231,7 @@
         "url": "http://chatwoot-app:3000/api/v1/accounts/2/conversations",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ source_id: $('Unir dados contato').item.json.contactId, inbox_id: 2, status: 'open' }) }}",
+        "jsonBody": "={{ JSON.stringify({ source_id: $('Unir dados contato').first().json.contactId, inbox_id: 2, status: 'open' }) }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -227,9 +240,6 @@
               "value": "hh5bHLwTRyKoqZzAvaPUUm5v"
             }
           ]
-        },
-        "options": {
-          "ignoreResponseCode": true
         }
       }
     },
@@ -239,11 +249,11 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2220,
+        2100,
         300
       ],
       "parameters": {
-        "jsCode": "const input = $input.item.json;\nconst existingConvs = $('Checar Conversa Aberta').item.json.payload;\nlet id = null;\n\n// Check if we came from 'Criar Conversa' (newly created)\nif (input.id) {\n  id = input.id;\n} \n// Check if we came from 'Tem conversa aberta?' (existing)\nelse if (existingConvs && existingConvs.length > 0) {\n  const open = existingConvs.find(c => c.status === 'open');\n  if (open) id = open.id;\n}\n\nreturn [{ json: { id } }];"
+        "jsCode": "const input = $input.item.json;\nconst checkConvNode = $('Checar Conversa Aberta').first().json.payload;\nlet id = null;\nif (input.id) {\n  id = input.id;\n} else if (checkConvNode && checkConvNode.length > 0) {\n  const open = checkConvNode.find(c => c.status === 'open');\n  if (open) id = open.id;\n}\nreturn [{ json: { id } }];"
       }
     },
     {
@@ -252,7 +262,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2440,
+        2300,
         300
       ],
       "parameters": {
@@ -260,7 +270,7 @@
         "url": "={{ 'http://chatwoot-app:3000/api/v1/accounts/2/conversations/' + $json.id + '/messages' }}",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ content: '🚨 SOLICITAÇÃO DE SUPORTE\\nMotivo: ' + $('Webhook request-human-support').item.json.body.reason, message_type: 'incoming', private: false }) }}",
+        "jsonBody": "={{ JSON.stringify({ content: '🚨 SOLICITAÇÃO DE SUPORTE\\nMotivo: ' + $('Webhook request-human-support').first().json.body.reason, message_type: 'incoming', private: false }) }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -269,29 +279,43 @@
               "value": "hh5bHLwTRyKoqZzAvaPUUm5v"
             }
           ]
-        },
-        "options": {
-          "ignoreResponseCode": true
         }
       }
     },
     {
-      "id": "respond-success",
-      "name": "Responder BuilderBot",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1,
+      "id": "pg-log-support-done",
+      "name": "Log Support Done",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
       "position": [
-        2660,
+        2500,
         300
       ],
       "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({ success: true, tutorName: 'Equipe Kreativ', estimatedWait: 'até 30 minutos' }) }}"
+        "operation": "executeQuery",
+        "query": "INSERT INTO debug_log (message) VALUES ('Support WF Done')"
+      },
+      "credentials": {
+        "postgres": {
+          "id": "lJaeEy4CpHbhgMAp",
+          "name": "Kreativ PostgreSQL"
+        }
       }
     }
   ],
   "connections": {
     "Webhook request-human-support": {
+      "main": [
+        [
+          {
+            "node": "Log Support Received",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Support Received": {
       "main": [
         [
           {
@@ -419,7 +443,7 @@
       "main": [
         [
           {
-            "node": "Responder BuilderBot",
+            "node": "Log Support Done",
             "type": "main",
             "index": 0
           }

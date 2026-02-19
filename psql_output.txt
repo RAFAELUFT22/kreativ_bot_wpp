@@ -1,0 +1,4 @@
+ id | phone | name | email | course_id | current_module | completed_modules | scores | lead_score | lead_tags | lead_profile | tutor_id | attendance_status | certificate_id | created_at | updated_at 
+----+-------+------+-------+-----------+----------------+-------------------+--------+------------+-----------+--------------+----------+-------------------+----------------+------------+------------
+(0 rows)
+

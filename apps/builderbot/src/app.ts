@@ -1,57 +1,28 @@
 import { createBot, createProvider, createFlow } from '@builderbot/bot'
+import { PostgresAdapter as Database } from '@builderbot/database-postgres'
 import { EvolutionProvider as Provider } from '@builderbot/provider-evolution-api'
-import { PostgreSQLAdapter as Database } from '@builderbot/database-postgres'
-import { Pool } from 'pg'
 
-import { welcomeFlow } from './flows/welcome.flow'
-import { moduleFlow, quizFlow } from './flows/module.flow'
-import { humanSupportFlow } from './flows/human-support.flow'
-import { aiTutorFlow } from './flows/ai-tutor.flow'
+import { entryFlow } from './flows/entry.flow'
 
-const PORT = parseInt(process.env.PORT || '3008')
-
-// Pool direto para operações de pause/resume fora do escopo do BuilderBot
-const pgPool = new Pool({
-    host: process.env.DB_HOST || 'postgres',
-    port: parseInt(process.env.DB_PORT || '5432'),
-    user: process.env.DB_USER || 'kreativ_user',
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'kreativ_edu',
-})
+const PORT = process.env.PORT ?? 3008
 
 const main = async () => {
-    // -------------------------------------------------------------------------
-    // Banco de dados — persiste estado de conversas e contexto do aluno
-    // -------------------------------------------------------------------------
-    const adapterDB = new Database({
-        host: process.env.DB_HOST || 'postgres',
-        port: parseInt(process.env.DB_PORT || '5432'),
-        user: process.env.DB_USER || 'kreativ_user',
-        password: process.env.DB_PASSWORD || '',
-        database: process.env.DB_NAME || 'kreativ_edu',
-    })
+    // Phase 19: Only entryFlow is used. All logic delegated to N8N.
+    const adapterFlow = createFlow([entryFlow])
 
-    // -------------------------------------------------------------------------
-    // Provider — Evolution API (WhatsApp unofficial)
-    // Para migrar para Meta API Oficial: troque por MetaProvider.
-    // Os flows não precisam de alteração.
-    // -------------------------------------------------------------------------
     const adapterProvider = createProvider(Provider, {
-        baseURL: process.env.EVOLUTION_API_URL || 'http://evolution-api:8080',
-        apiKey: process.env.EVOLUTION_API_KEY || '',
-        instanceName: process.env.EVOLUTION_INSTANCE || 'kreativ-bot',
+        name: process.env.EVOLUTION_INSTANCE,
+        baseUrl: process.env.EVOLUTION_API_URL,
+        apikey: process.env.EVOLUTION_API_KEY,
     })
 
-    // -------------------------------------------------------------------------
-    // Flows — lógica de conversação
-    // -------------------------------------------------------------------------
-    const adapterFlow = createFlow([
-        welcomeFlow,
-        moduleFlow,
-        quizFlow,
-        humanSupportFlow,
-        aiTutorFlow,  // FALLBACK: responde mensagens livres com DeepSeek
-    ])
+    const adapterDB = new Database({
+        host: process.env.DB_HOST,
+        user: process.env.DB_USER,
+        database: process.env.DB_NAME,
+        password: process.env.DB_PASSWORD,
+        port: Number(process.env.DB_PORT),
+    })
 
     const { handleCtx, httpServer } = await createBot({
         flow: adapterFlow,
@@ -59,62 +30,46 @@ const main = async () => {
         database: adapterDB,
     })
 
-    // -------------------------------------------------------------------------
-    // Endpoint interno para N8N enviar mensagens proativamente ao aluno
-    // POST http://builderbot:3008/api/send
-    // Body: { "number": "5511999999999", "message": "texto" }
-    // -------------------------------------------------------------------------
-    adapterProvider.server.post(
-        '/api/send',
-        handleCtx(async (bot, req, res) => {
-            const { number, message } = req.body as { number: string; message: string }
-            if (!number || !message) {
-                return res.status(400).end('Campos obrigatórios: number, message')
+    httpServer(+PORT)
+
+    // Endpoints extras para controle (pausa/resume)
+    adapterProvider.server.post('/api/pause', async (req, res) => {
+        const { phone } = req.body
+        if (phone) {
+            await adapterDB.update({ attendance_status: 'human' }, phone)
+            console.log(`[PAUSE] Bot pausado para ${phone}`)
+            res.json({ success: true, message: 'Bot paused' })
+        } else {
+            res.status(400).json({ error: 'Phone is required' })
+        }
+    })
+
+    adapterProvider.server.post('/api/resume', async (req, res) => {
+        const { phone } = req.body
+        if (phone) {
+            await adapterDB.update({ attendance_status: 'bot' }, phone)
+            console.log(`[RESUME] Bot retomado para ${phone}`)
+            res.json({ success: true, message: 'Bot resumed' })
+        } else {
+            res.status(400).json({ error: 'Phone is required' })
+        }
+    })
+
+    // Webhook endpoint for N8N or other services to send messages voluntarily
+    adapterProvider.server.post('/api/send', async (req, res) => {
+        const { phone, message } = req.body
+        if (phone && message) {
+            try {
+                await adapterProvider.sendText(`${phone}@s.whatsapp.net`, message)
+                res.json({ success: true })
+            } catch (err) {
+                console.error('Error sending message:', err)
+                res.status(500).json({ error: 'Failed' })
             }
-            await bot.sendMessage(number, message, {})
-            return res.end('ok')
-        })
-    )
-
-    // -------------------------------------------------------------------------
-    // Pause/resume do bot via flag no PostgreSQL (attendance_status)
-    // N8N chama estes endpoints quando tutor assume / encerra atendimento.
-    // POST /api/pause  { "number": "5511999999999" }
-    // POST /api/resume { "number": "5511999999999" }
-    // -------------------------------------------------------------------------
-    adapterProvider.server.post(
-        '/api/pause',
-        handleCtx(async (_bot, req, res) => {
-            const { number } = req.body as { number: string }
-            await pgPool.query(
-                `UPDATE students SET attendance_status = 'human', updated_at = NOW()
-                 WHERE phone = $1`,
-                [number]
-            )
-            return res.end('paused')
-        })
-    )
-
-    adapterProvider.server.post(
-        '/api/resume',
-        handleCtx(async (_bot, req, res) => {
-            const { number } = req.body as { number: string }
-            await pgPool.query(
-                `UPDATE students SET attendance_status = 'bot', updated_at = NOW()
-                 WHERE phone = $1`,
-                [number]
-            )
-            return res.end('resumed')
-        })
-    )
-
-    httpServer(PORT)
-    console.log(`[BuilderBot] Iniciado na porta ${PORT}`)
-    console.log(`[BuilderBot] Evolution API: ${process.env.EVOLUTION_API_URL}`)
-    console.log(`[BuilderBot] Instância: ${process.env.EVOLUTION_INSTANCE}`)
+        } else {
+            res.status(400).json({ error: 'Missing phone or message' })
+        }
+    })
 }
 
-main().catch((err) => {
-    console.error('[BuilderBot] Erro fatal na inicialização:', err)
-    process.exit(1)
-})
+main()

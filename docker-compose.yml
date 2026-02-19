@@ -196,6 +196,8 @@ services:
       N8N_PROXY_HOPS: 1
       N8N_COMMUNITY_PACKAGES_ALLOW_TOOL_USAGE: "true"
       N8N_AI_ENABLED: "true"
+      ACTIVE_LLM_PROVIDER: ${ACTIVE_LLM_PROVIDER:-openrouter}
+      OPEN_ROUTER_API: ${OPEN_ROUTER_API}
 
     volumes:
       - n8n_data:/home/node/.n8n

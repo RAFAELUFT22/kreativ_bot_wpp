@@ -1,0 +1,260 @@
+{
+    "active": true,
+    "name": "Kreativ: Test LLM Latency",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "test-llm",
+                "responseMode": "responseNode",
+                "options": {}
+            },
+            "id": "webhook",
+            "name": "Webhook",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2,
+            "position": [
+                200,
+                300
+            ],
+            "webhookId": "test-llm"
+        },
+        {
+            "parameters": {
+                "jsCode": "return [{ json: { start: Date.now(), message: $input.item.json.body?.message ?? 'Hello' } }];"
+            },
+            "id": "start-timer",
+            "name": "Start Timer",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                400,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://api.deepseek.com/chat/completions",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer sk-412552782fbe4009a25a013825e6ab66"
+                        },
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ model: 'deepseek-chat', messages: [{ role: 'user', content: $('Start Timer').item.json.message }] }) }}"
+            },
+            "id": "deepseek",
+            "name": "DeepSeek Req",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.1,
+            "position": [
+                600,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://openrouter.ai/api/v1/chat/completions",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "={{ 'Bearer ' + $env[\"OPEN_ROUTER_API\"] }}"
+                        },
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ model: 'deepseek/deepseek-chat', messages: [{ role: 'user', content: $('Start Timer').item.json.message }] }) }}"
+            },
+            "id": "openrouter",
+            "name": "OpenRouter Req",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.1,
+            "position": [
+                600,
+                400
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const start = $('Start Timer').item.json.start;\nconst duration = Date.now() - start;\nreturn [{ json: { provider: 'deepseek', duration, response: $input.item.json.choices[0].message.content } }];"
+            },
+            "id": "calc-deepseek",
+            "name": "Calc DeepSeek",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                800,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const start = $('Start Timer').item.json.start;\nconst duration = Date.now() - start;\nreturn [{ json: { provider: 'openrouter', duration, response: $input.item.json.choices[0].message.content } }];"
+            },
+            "id": "calc-openrouter",
+            "name": "Calc OpenRouter",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                800,
+                400
+            ]
+        },
+        {
+            "parameters": {
+                "mode": "append"
+            },
+            "id": "merge",
+            "name": "Merge",
+            "type": "n8n-nodes-base.merge",
+            "typeVersion": 2,
+            "position": [
+                1000,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const results = $input.all().map(i => i.json);\nconst deepseek = results.find(r => r.provider === 'deepseek');\nconst openrouter = results.find(r => r.provider === 'openrouter');\n\nconst winner = (deepseek?.duration < openrouter?.duration) ? 'deepseek' : 'openrouter';\n\nreturn [{ json: {\n  deepseek_time_ms: deepseek?.duration,\n  openrouter_time_ms: openrouter?.duration,\n  winner,\n  diff_ms: Math.abs((deepseek?.duration || 0) - (openrouter?.duration || 0))\n} }];"
+            },
+            "id": "compare",
+            "name": "Compare",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1200,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={{ JSON.stringify($json) }}"
+            },
+            "id": "respond",
+            "name": "Respond",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1,
+            "position": [
+                1400,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "Start Timer",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Start Timer": {
+            "main": [
+                [
+                    {
+                        "node": "DeepSeek Req",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "OpenRouter Req",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "DeepSeek Req": {
+            "main": [
+                [
+                    {
+                        "node": "Calc DeepSeek",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "OpenRouter Req": {
+            "main": [
+                [
+                    {
+                        "node": "Calc OpenRouter",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Calc DeepSeek": {
+            "main": [
+                [
+                    {
+                        "node": "Merge",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Calc OpenRouter": {
+            "main": [
+                [
+                    {
+                        "node": "Merge",
+                        "type": "main",
+                        "index": 1
+                    }
+                ]
+            ]
+        },
+        "Merge": {
+            "main": [
+                [
+                    {
+                        "node": "Compare",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Compare": {
+            "main": [
+                [
+                    {
+                        "node": "Respond",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1"
+    }
+}

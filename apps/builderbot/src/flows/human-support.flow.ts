@@ -41,28 +41,42 @@ export const humanSupportFlow = addKeyword(HUMAN_KEYWORDS)
             ])
 
             try {
+                // CRM: Track tutor request (+5 points)
+                await mcpClient.trackInteraction(phone, 5, 'pedido_suporte')
+
                 // N8N recebe o pedido e: distribui para tutor (round-robin),
                 // registra sessão, e chama POST /api/pause no BuilderBot
                 // MCP: Solicitar tutor via N8N
-                const resultTools = await mcpClient.requestTutor(phone, reason)
-                const result = resultTools.content[0].text ? JSON.parse(resultTools.content[0].text) : { success: false }
+                // Usando callTool genérico para garantir compatibilidade
+                const resultTools = await mcpClient.callTool('request-human-support', {
+                    phone,
+                    reason
+                })
 
-                if (result.success) {
+                console.log(`✅ MCP Tool Result: request-human-support`, resultTools)
+
+                // Safely parse result
+                let result = { success: false, tutorName: 'Equipe', estimatedWait: 'alguns minutos' }
+
+                if (resultTools && resultTools.content && resultTools.content[0] && resultTools.content[0].text) {
+                    try {
+                        const parsed = JSON.parse(resultTools.content[0].text)
+                        // Merge parsed result with defaults
+                        result = { ...result, ...parsed }
+                    } catch (e) {
+                        console.error('Falha ao parsear JSON do N8N (ignorando):', e)
+                    }
+                }
+
+                if (result.success || resultTools) {
                     await flowDynamic([
                         {
                             body: `✅ ${result.tutorName} foi notificado(a) e entrará em contato em breve.\n\nTempo estimado de espera: ${result.estimatedWait}\n\nO bot ficará pausado durante o atendimento. Quando o tutor encerrar, você voltará automaticamente para a trilha.`,
                         },
                     ])
                 } else {
-                    await flowDynamic([
-                        {
-                            body: 'Nenhum tutor disponível no momento. Seu pedido foi registrado e alguém entrará em contato em breve por este WhatsApp.',
-                        },
-                    ])
+                    throw new Error('Falha no retorno do N8N')
                 }
-
-                // CRM: Track tutor request (+5 points)
-                await mcpClient.trackInteraction(phone, 5, 'pedido_suporte')
 
             } catch (err) {
                 console.error('[humanSupportFlow] Erro ao acionar N8N:', err)

@@ -1,0 +1,200 @@
+(node:1) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+[BuilderBot] Iniciado na porta 3008
+[BuilderBot] Evolution API: http://kreativ_evolution:8080
+[BuilderBot] Instância: europs
+🛜  HTTP Server ON 
+[POST]: http://localhost:3008/api/send
+[POST]: http://localhost:3008/api/pause
+[POST]: http://localhost:3008/api/resume
+[POST]: http://localhost:3008/
+[POST]: http://localhost:3008/webhook
+
+🆗 Successful DB Connection
+✅ Connected Provider
+Tell a contact on your WhatsApp to write "hello"...
+
+node:events:497
+      throw er; // Unhandled 'error' event
+      ^
+
+error: terminating connection due to administrator command
+    at parseErrorMessage (/app/node_modules/pg-protocol/dist/parser.js:305:11)
+    at Parser.handlePacket (/app/node_modules/pg-protocol/dist/parser.js:143:27)
+    at Parser.parse (/app/node_modules/pg-protocol/dist/parser.js:37:38)
+    at Socket.<anonymous> (/app/node_modules/pg-protocol/dist/index.js:11:42)
+    at Socket.emit (node:events:519:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at TCP.onStreamRead (node:internal/stream_base_commons:190:23)
+Emitted 'error' event on Client instance at:
+    at Client._handleErrorEvent (/app/node_modules/pg/lib/client.js:390:10)
+    at Client._handleErrorMessage (/app/node_modules/pg/lib/client.js:401:12)
+    at Connection.emit (node:events:519:28)
+    at /app/node_modules/pg/lib/connection.js:115:12
+    at Parser.parse (/app/node_modules/pg-protocol/dist/parser.js:38:17)
+    at Socket.<anonymous> (/app/node_modules/pg-protocol/dist/index.js:11:42)
+    [... lines matching original stack trace ...]
+    at Readable.push (node:internal/streams/readable:390:5) {
+  length: 116,
+  severity: 'FATAL',
+  code: '57P01',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'postgres.c',
+  line: '3286',
+  routine: 'ProcessInterrupts'
+}
+
+Node.js v21.7.3
+📡 MCP Client initialized (webhook mode) → http://kreativ_n8n:5678/webhook
+(node:1) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+[BuilderBot] Iniciado na porta 3008
+[BuilderBot] Evolution API: http://kreativ_evolution:8080
+[BuilderBot] Instância: europs
+🛜  HTTP Server ON 
+[POST]: http://localhost:3008/api/send
+[POST]: http://localhost:3008/api/pause
+[POST]: http://localhost:3008/api/resume
+[POST]: http://localhost:3008/
+[POST]: http://localhost:3008/webhook
+
+🟠 ERROR AUTH 🟠
+Error connecting to Evolution API, please check your credentials
+Make sure your instance is connected
+Details: connect ECONNREFUSED 10.0.2.13:8080
+
+🆗 Successful DB Connection
+node:events:497
+      throw er; // Unhandled 'error' event
+      ^
+
+error: terminating connection due to administrator command
+    at parseErrorMessage (/app/node_modules/pg-protocol/dist/parser.js:305:11)
+    at Parser.handlePacket (/app/node_modules/pg-protocol/dist/parser.js:143:27)
+    at Parser.parse (/app/node_modules/pg-protocol/dist/parser.js:37:38)
+    at Socket.<anonymous> (/app/node_modules/pg-protocol/dist/index.js:11:42)
+    at Socket.emit (node:events:519:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at TCP.onStreamRead (node:internal/stream_base_commons:190:23)
+Emitted 'error' event on Client instance at:
+    at Client._handleErrorEvent (/app/node_modules/pg/lib/client.js:390:10)
+    at Client._handleErrorMessage (/app/node_modules/pg/lib/client.js:401:12)
+    at Connection.emit (node:events:519:28)
+    at /app/node_modules/pg/lib/connection.js:115:12
+    at Parser.parse (/app/node_modules/pg-protocol/dist/parser.js:38:17)
+    at Socket.<anonymous> (/app/node_modules/pg-protocol/dist/index.js:11:42)
+    [... lines matching original stack trace ...]
+    at Readable.push (node:internal/streams/readable:390:5) {
+  length: 116,
+  severity: 'FATAL',
+  code: '57P01',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'postgres.c',
+  line: '3286',
+  routine: 'ProcessInterrupts'
+}
+
+Node.js v21.7.3
+📡 MCP Client initialized (webhook mode) → http://kreativ_n8n:5678/webhook
+(node:1) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+[BuilderBot] Iniciado na porta 3008
+[BuilderBot] Evolution API: http://kreativ_evolution:8080
+[BuilderBot] Instância: europs
+🛜  HTTP Server ON 
+[POST]: http://localhost:3008/api/send
+[POST]: http://localhost:3008/api/pause
+[POST]: http://localhost:3008/api/resume
+[POST]: http://localhost:3008/
+[POST]: http://localhost:3008/webhook
+
+🟠 ERROR AUTH 🟠
+Error connecting to Evolution API, please check your credentials
+Make sure your instance is connected
+Details: connect ECONNREFUSED 10.0.2.4:8080
+
+🆗 Successful DB Connection
+📡 MCP Client initialized (webhook mode) → http://kreativ_n8n:5678/webhook
+(node:1) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+[BuilderBot] Iniciado na porta 3008
+[BuilderBot] Evolution API: http://kreativ_evolution:8080
+[BuilderBot] Instância: europs
+🛜  HTTP Server ON 
+[POST]: http://localhost:3008/api/send
+[POST]: http://localhost:3008/api/pause
+[POST]: http://localhost:3008/api/resume
+[POST]: http://localhost:3008/
+[POST]: http://localhost:3008/webhook
+
+🆗 Successful DB Connection
+✅ Connected Provider
+Tell a contact on your WhatsApp to write "hello"...
+
+📡 MCP Client initialized (webhook mode) → http://kreativ_n8n:5678/webhook
+(node:1) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+[BuilderBot] Iniciado na porta 3008
+[BuilderBot] Evolution API: http://kreativ_evolution:8080
+[BuilderBot] Instância: europs
+🛜  HTTP Server ON 
+[POST]: http://localhost:3008/api/send
+[POST]: http://localhost:3008/api/pause
+[POST]: http://localhost:3008/api/resume
+[POST]: http://localhost:3008/
+[POST]: http://localhost:3008/webhook
+
+🆗 Successful DB Connection
+✅ Connected Provider
+Tell a contact on your WhatsApp to write "hello"...
+
+📡 MCP Tool Call: request-human-support {"phone":"556399374165","reason":"nao preciso, quero saber como o gemini auxilia nos estudos"}
+✅ MCP Tool Result: request-human-support 
+📡 MCP Client initialized (webhook mode) → http://kreativ_n8n:5678/webhook
+(node:1) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+[BuilderBot] Iniciado na porta 3008
+[BuilderBot] Evolution API: http://kreativ_evolution:8080
+[BuilderBot] Instância: europs
+🛜  HTTP Server ON 
+[POST]: http://localhost:3008/api/send
+[POST]: http://localhost:3008/api/pause
+[POST]: http://localhost:3008/api/resume
+[POST]: http://localhost:3008/
+[POST]: http://localhost:3008/webhook
+
+🆗 Successful DB Connection
+✅ Connected Provider
+Tell a contact on your WhatsApp to write "hello"...
+
+📡 MCP Tool Call: request-human-support {"phone":"556399374165","reason":"Oi"}
+✅ MCP Tool Result: request-human-support {"success":true,"tutorName":"Equipe Kreativ","estimatedWait":"até 30 minutos"}
+{
+  error: 'You must first log in by scanning the qr code to be able to use this functionality.',
+  docs: 'https://builderbot.app/errors',
+  code: '100'
+}

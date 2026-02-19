@@ -13,7 +13,7 @@
             "parameters": {
                 "httpMethod": "POST",
                 "path": "save-progress",
-                "responseMode": "responseNode",
+                "responseMode": "onReceived",
                 "options": {}
             },
             "webhookId": "kreativ-save-progress"

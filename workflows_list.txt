@@ -1,0 +1,234 @@
+Workflows: [
+  { id: 'tyvT2fifgDvtesBK', name: 'Echo Test', active: true },
+  {
+    id: '8r59UcZDhKxS9APA',
+    name: 'Kreativ: Emitir Certificado',
+    active: false
+  },
+  {
+    id: '9SQfSnUNWOc3SKFT',
+    name: 'Kreativ: Atualizar Label Chatwoot',
+    active: true
+  },
+  {
+    id: 'y9cnYNKyC58ML5cv',
+    name: 'Kreativ: Test LLM Latency',
+    active: true
+  },
+  {
+    id: '1Mi5mqgkQoDvt9q1',
+    name: 'Kreativ: Save Progress (Webhook)',
+    active: false
+  },
+  {
+    id: 'vCeioL4GyOdXIYRi',
+    name: 'MCP Tool: Emit Certificate',
+    active: false
+  },
+  {
+    id: 'iw66SnsbgBqmgCmB',
+    name: 'WhatsApp Bot - Kreativ Educação',
+    active: false
+  },
+  {
+    id: 'isClxn7PfHspHQo7',
+    name: 'Kreativ: Test LLM Latency',
+    active: false
+  },
+  {
+    id: 'u541y5so1BbRHGob',
+    name: 'Kreativ: Save Progress (Webhook)',
+    active: false
+  },
+  {
+    id: 'pDnDwl6D7mFdYSRf',
+    name: 'Kreativ: AI Cognitive Router',
+    active: true
+  },
+  { id: 'pmPB3TiDV4T3NpQz', name: 'My workflow', active: false },
+  {
+    id: 'yKcjMnH87VsO5n9V',
+    name: 'Kreativ: Emitir Certificado',
+    active: true
+  },
+  {
+    id: '04ZmheF5PCJr52aI',
+    name: 'BuilderBot: request-human-support',
+    active: true
+  },
+  {
+    id: 'TVYcwBvRkHKWjhrC',
+    name: 'Kreativ: AI Cognitive Router',
+    active: false
+  },
+  {
+    id: 'j8zMQxpK5YSj05yh',
+    name: 'Kreativ: AI Cognitive Router',
+    active: false
+  },
+  {
+    id: 'xrNULB31nySQYIzJ',
+    name: 'MCP Server: Kreativ Tools',
+    active: false
+  },
+  {
+    id: 'UozMoN5K4Kp8hK4j',
+    name: 'Kreativ: AI Cognitive Router',
+    active: false
+  },
+  {
+    id: 'TTqgZMU64WlIsx7u',
+    name: 'BuilderBot: get-student-module',
+    active: false
+  },
+  {
+    id: 'Wv1K8aJV9rrwYkOi',
+    name: 'Kreativ: Lead Scoring',
+    active: true
+  },
+  {
+    id: '9QKjYxL0FEAQdvIo',
+    name: 'MCP Tool: Request Tutor',
+    active: false
+  },
+  {
+    id: 'CtFtzCL58kW6Bn9v',
+    name: 'Kreativ: Save Progress (Webhook)',
+    active: false
+  },
+  {
+    id: 'oDg2TF7C0ne12fFg',
+    name: 'BuilderBot: get-student-module',
+    active: true
+  },
+  {
+    id: 'MUyOXRYkiAHAY2Yv',
+    name: 'Kreativ: AI Cognitive Router',
+    active: false
+  },
+  {
+    id: 'zOSTJqpGI87IKmkm',
+    name: 'Kreativ: Chatwoot → Retomar Bot',
+    active: true
+  },
+  {
+    id: 'cj1N7ZPVoDxlI7Sk',
+    name: 'Kreativ: Lead Scoring',
+    active: true
+  },
+  {
+    id: '73NlfkAK3Zlb1dke',
+    name: 'MCP Tool: Resume Bot',
+    active: false
+  },
+  {
+    id: 'SMdIJwzPbTKVDweu',
+    name: 'Kreativ: Test LLM Latency',
+    active: false
+  },
+  {
+    id: 'grFJCDEEl8lS6LY6',
+    name: 'Kreativ: AI Cognitive Router',
+    active: false
+  },
+  {
+    id: 'sKXwOHDHjEadXQD0',
+    name: 'BuilderBot: submit-quiz-answer',
+    active: true
+  },
+  {
+    id: 'oeM02qpKdIGFbGQX',
+    name: 'WhatsApp Router - Kreativ Educação',
+    active: false
+  },
+  {
+    id: 'mAanw0dsgDUKaEAF',
+    name: 'Kreativ: AI Cognitive Router',
+    active: false
+  },
+  {
+    id: 'tULwBOlfOnCuk586',
+    name: 'Kreativ: Save Progress (Webhook)',
+    active: true
+  },
+  {
+    id: '20bdoCN6e5W8EERS',
+    name: 'Kreativ: AI Cognitive Router',
+    active: false
+  },
+  {
+    id: 'qhzX4p5tNRL5vFI6',
+    name: 'Kreativ: AI Cognitive Router',
+    active: false
+  },
+  {
+    id: 'BkMhlkCXSyPqBMqq',
+    name: 'BuilderBot: get-student-module',
+    active: false
+  },
+  {
+    id: 'jaOc9xKeDFtXbXuk',
+    name: 'Kreativ: AI Cognitive Router',
+    active: false
+  },
+  {
+    id: 'QG0idL19GsMmMzjC',
+    name: 'Kreativ: Emitir Certificado',
+    active: false
+  },
+  {
+    id: 'k41Cvfgsrr6LlNqb',
+    name: 'Kreativ: Resume Bot (Webhook)',
+    active: true
+  },
+  {
+    id: 'FlYBNeM6KwKpuyro',
+    name: 'MCP Tool: Save Progress',
+    active: false
+  },
+  {
+    id: 'FDkc4gh7kp6hKZ3E',
+    name: 'Kreativ: Lembrete Inatividade',
+    active: true
+  },
+  {
+    id: 'X2FJHms7yNmmVFu8',
+    name: 'Kreativ: Emitir Certificado',
+    active: false
+  },
+  {
+    id: 'krpsi0uW7fMhxj5T',
+    name: 'Kreativ: Cadastrar Aluno',
+    active: true
+  },
+  {
+    id: 'gS1C7gqzGU1xbtlw',
+    name: 'Kreativ: AI Cognitive Router',
+    active: false
+  },
+  {
+    id: 'jN5CsMB1Sr66YIWj',
+    name: 'Kreativ: AI Cognitive Router',
+    active: false
+  },
+  {
+    id: 'HCnfOkbtviheBGBk',
+    name: 'Kreativ: Relatório Semanal',
+    active: true
+  },
+  {
+    id: 'NK4sZKHtaNgmuB1o',
+    name: 'Kreativ: Test LLM Latency',
+    active: false
+  },
+  {
+    id: 'QVrgXdevaAwnykPn',
+    name: 'Kreativ: Dashboard Monitoramento',
+    active: true
+  },
+  {
+    id: 'iEsgbYIFoOH1f6pU',
+    name: 'Kreativ: AI Cognitive Router',
+    active: false
+  }
+]

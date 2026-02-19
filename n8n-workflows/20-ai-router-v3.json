@@ -1,0 +1,384 @@
+{
+    "name": "Kreativ: AI Adaptive Router V3 (Redis Memory)",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "ai-tutor-v3",
+                "responseMode": "onReceived",
+                "options": {}
+            },
+            "id": "webhook-start",
+            "name": "Webhook",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2,
+            "position": [
+                100,
+                300
+            ],
+            "webhookId": "kreativ-ai-tutor-v3"
+        },
+        {
+            "parameters": {
+                "jsCode": "const input = $json.body || $json;\nreturn [{\n  json: {\n    phone: input.phone || 'no-phone',\n    body: input.body || 'Oi',\n    timestamp: new Date().toISOString()\n  }\n}];"
+            },
+            "id": "transformer",
+            "name": "Transformer",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                250,
+                300
+            ]
+        },
+        {
+            "id": "rd-get-history",
+            "name": "Redis: Get History",
+            "type": "n8n-nodes-base.redis",
+            "typeVersion": 1,
+            "position": [
+                400,
+                300
+            ],
+            "parameters": {
+                "operation": "lrange",
+                "key": "={{ \"chat_history:\" + $json.phone }}",
+                "start": 0,
+                "stop": 9
+            },
+            "credentials": {
+                "redis": {
+                    "id": "pqD1PcyYhsWm4i3a",
+                    "name": "Kreativ Redis"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://kreativ_builderbot:3008/api/query",
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ query: \"SELECT s.name, s.course_id, s.current_module, c.name as course_name FROM students s JOIN courses c ON s.course_id = c.id WHERE s.phone = $1 LIMIT 1\", values: [$node[\"Transformer\"].json.phone] }) }}",
+                "options": {}
+            },
+            "id": "get-student-proxy",
+            "name": "Get Student Proxy",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.1,
+            "position": [
+                550,
+                300
+            ],
+            "continueOnFail": true
+        },
+        {
+            "parameters": {
+                "jsCode": "const rows = $json.rows || [];\nif (rows.length > 0) return [{ json: rows[0] }];\nreturn [{ json: { name: 'Aluno', course_id: 19, current_module: 1, course_name: 'IA Aplicada' } }];"
+            },
+            "id": "get-student",
+            "name": "Get Student",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                700,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://kreativ_builderbot:3008/api/query",
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ query: \"SELECT question, answer FROM training_memory WHERE course_id = $1 OR student_phone = $2 ORDER BY created_at DESC LIMIT 2\", values: [$node[\"Get Student\"].json.course_id, $node[\"Transformer\"].json.phone] }) }}",
+                "options": {}
+            },
+            "id": "fetch-memories",
+            "name": "Buscar Exemplos (Few-shot)",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.1,
+            "position": [
+                850,
+                450
+            ],
+            "continueOnFail": true
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://kreativ_builderbot:3008/api/query",
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ query: \"SELECT title, content_text as syllabus FROM modules m WHERE m.course_id = $1 AND m.module_number = $2 LIMIT 1\", values: [$node[\"Get Student\"].json.course_id, $node[\"Get Student\"].json.current_module] }) }}",
+                "options": {}
+            },
+            "id": "get-module-proxy",
+            "name": "Get Module Proxy",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.1,
+            "position": [
+                850,
+                150
+            ],
+            "continueOnFail": true
+        },
+        {
+            "parameters": {
+                "jsCode": "const redisHistory = $('Redis: Get History').all().map(i => i.json.result).filter(Boolean);\nconst fewShot = $('Buscar Exemplos (Few-shot)').item.json.rows || [];\nconst mod = $('Get Module Proxy').item.json.rows?.[0] || { title: 'Intro', syllabus: 'Geral' };\nconst std = $('Get Student').item.json;\n\n// Redis history comes as array of strings (stringified JSONs)\nlet history = [];\ntry {\n  history = redisHistory.map(h => JSON.parse(h)).reverse();\n} catch(e) {}\n\nconst examples = fewShot.map(m => `P: ${m.question}\\nR: ${m.answer}`).join('\\n---\\n');\n\nreturn [{ \n  json: { \n    syllabus: mod.syllabus, \n    student_name: std.name, \n    course_name: std.course_name,\n    examples,\n    history\n  } \n}];"
+            },
+            "id": "aggregator",
+            "name": "Agregador de Contexto",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1050,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://api.deepseek.com/chat/completions",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer sk-412552782fbe4009a25a013825e6ab66"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ \n  const history = $json.history.map(h => ({ role: h.role, content: h.content }));\n  const messages = [\n    {\n      role: \"system\",\n      content: `Você é o Tutor IA da Kreativ Educação para o curso: ${$json.course_name}.\\nALUNO: ${$json.student_name}\\n\\nEXEMPLOS DE TOM DE VOZ:\\n${$json.examples}\\n\\nEMENTA ATUAL:\\n${$json.syllabus}`\n    },\n    ...history,\n    { role: \"user\", content: $node[\"Transformer\"].json.body }\n  ];\n  return JSON.stringify({\n    model: \"deepseek-chat\",\n    messages,\n    temperature: 0.7\n  });\n}}",
+                "options": {}
+            },
+            "id": "deepseek-ai",
+            "name": "DeepSeek AI",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                1250,
+                300
+            ]
+        },
+        {
+            "id": "rd-push-user",
+            "name": "Redis: Push User",
+            "type": "n8n-nodes-base.redis",
+            "typeVersion": 1,
+            "position": [
+                1450,
+                200
+            ],
+            "parameters": {
+                "operation": "lpush",
+                "key": "={{ \"chat_history:\" + $node[\"Transformer\"].json.phone }}",
+                "value": "={{ JSON.stringify({ role: 'user', content: $node[\"Transformer\"].json.body }) }}"
+            },
+            "credentials": {
+                "redis": {
+                    "id": "pqD1PcyYhsWm4i3a",
+                    "name": "Kreativ Redis"
+                }
+            }
+        },
+        {
+            "id": "rd-push-ai",
+            "name": "Redis: Push AI",
+            "type": "n8n-nodes-base.redis",
+            "typeVersion": 1,
+            "position": [
+                1450,
+                400
+            ],
+            "parameters": {
+                "operation": "lpush",
+                "key": "={{ \"chat_history:\" + $node[\"Transformer\"].json.phone }}",
+                "value": "={{ JSON.stringify({ role: 'assistant', content: $json.choices[0].message.content }) }}"
+            },
+            "credentials": {
+                "redis": {
+                    "id": "pqD1PcyYhsWm4i3a",
+                    "name": "Kreativ Redis"
+                }
+            }
+        },
+        {
+            "id": "rd-trim-history",
+            "name": "Redis: Trim History",
+            "type": "n8n-nodes-base.redis",
+            "typeVersion": 1,
+            "position": [
+                1650,
+                400
+            ],
+            "parameters": {
+                "operation": "ltrim",
+                "key": "={{ \"chat_history:\" + $node[\"Transformer\"].json.phone }}",
+                "start": 0,
+                "stop": 19
+            },
+            "credentials": {
+                "redis": {
+                    "id": "pqD1PcyYhsWm4i3a",
+                    "name": "Kreativ Redis"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://kreativ_builderbot:3008/api/send",
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ phone: $node[\"Transformer\"].json.phone, message: $node[\"DeepSeek AI\"].json.choices[0].message.content }) }}"
+            },
+            "id": "send-wa",
+            "name": "Send WhatsApp",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.1,
+            "position": [
+                1850,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "Transformer",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Transformer": {
+            "main": [
+                [
+                    {
+                        "node": "Redis: Get History",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Redis: Get History": {
+            "main": [
+                [
+                    {
+                        "node": "Get Student Proxy",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Get Student Proxy": {
+            "main": [
+                [
+                    {
+                        "node": "Get Student",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Get Student": {
+            "main": [
+                [
+                    {
+                        "node": "Buscar Exemplos (Few-shot)",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Get Module Proxy",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Buscar Exemplos (Few-shot)": {
+            "main": [
+                [
+                    {
+                        "node": "Agregador de Contexto",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Get Module Proxy": {
+            "main": [
+                [
+                    {
+                        "node": "Agregador de Contexto",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Agregador de Contexto": {
+            "main": [
+                [
+                    {
+                        "node": "DeepSeek AI",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "DeepSeek AI": {
+            "main": [
+                [
+                    {
+                        "node": "Redis: Push User",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Redis: Push AI",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Redis: Push AI": {
+            "main": [
+                [
+                    {
+                        "node": "Redis: Trim History",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Redis: Trim History": {
+            "main": [
+                [
+                    {
+                        "node": "Send WhatsApp",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1"
+    }
+}

@@ -13,7 +13,7 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "emit-certificate",
-        "responseMode": "responseNode",
+        "responseMode": "onReceived",
         "options": {}
       },
       "webhookId": "kreativ-emit-certificate"

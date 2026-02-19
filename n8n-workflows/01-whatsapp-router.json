@@ -7,7 +7,7 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
-        240,
+        200,
         300
       ],
       "parameters": {
@@ -23,7 +23,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        460,
+        380,
         300
       ],
       "parameters": {
@@ -65,7 +65,7 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        680,
+        560,
         300
       ],
       "parameters": {
@@ -101,17 +101,141 @@
       }
     },
     {
-      "id": "n-db",
-      "name": "Buscar estado do usuário",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.6,
+      "id": "rd-rate-limit",
+      "name": "Redis: Rate Limit",
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
       "position": [
-        900,
+        740,
         300
       ],
       "parameters": {
+        "operation": "increment",
+        "key": "={{ \"rate_limit:\" + $json.phone }}"
+      },
+      "credentials": {
+        "redis": {
+          "id": "pqD1PcyYhsWm4i3a",
+          "name": "Kreativ Redis"
+        }
+      }
+    },
+    {
+      "id": "if-first",
+      "name": "Primeira mensagem?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        920,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "cond-first",
+              "leftValue": "={{ $json.result }}",
+              "rightValue": 1,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "rd-expire-limit",
+      "name": "Redis: Expire Limit",
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        1100,
+        200
+      ],
+      "parameters": {
+        "operation": "expire",
+        "key": "={{ \"rate_limit:\" + $node[\"Extrair dados\"].json.phone }}",
+        "seconds": 3
+      },
+      "credentials": {
+        "redis": {
+          "id": "pqD1PcyYhsWm4i3a",
+          "name": "Kreativ Redis"
+        }
+      }
+    },
+    {
+      "id": "rd-get-status",
+      "name": "Redis: Get Status",
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        1300,
+        300
+      ],
+      "parameters": {
+        "operation": "get",
+        "key": "={{ \"session:\" + $node[\"Extrair dados\"].json.phone + \":status\" }}"
+      },
+      "credentials": {
+        "redis": {
+          "id": "pqD1PcyYhsWm4i3a",
+          "name": "Kreativ Redis"
+        }
+      }
+    },
+    {
+      "id": "if-cached",
+      "name": "Status em Cache?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1500,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "cond-cache",
+              "leftValue": "={{ $json.result }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "n-db",
+      "name": "Buscar estado no DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1700,
+        400
+      ],
+      "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT COALESCE(s.attendance_status, 'new') as attendance_status, COALESCE(s.current_module, 0) as current_module FROM (SELECT 1) t LEFT JOIN students s ON s.phone = '{{ $json.phone }}' LIMIT 1",
+        "query": "SELECT COALESCE(s.attendance_status, 'bot') as attendance_status, COALESCE(s.current_module, 0) as current_module FROM (SELECT 1) t LEFT JOIN students s ON s.phone = '{{ $node[\"Extrair dados\"].json.phone }}' LIMIT 1",
         "options": {}
       },
       "credentials": {
@@ -119,8 +243,29 @@
           "id": "lJaeEy4CpHbhgMAp",
           "name": "Kreativ PostgreSQL"
         }
+      }
+    },
+    {
+      "id": "rd-set-status",
+      "name": "Redis: Set Status",
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        1900,
+        400
+      ],
+      "parameters": {
+        "operation": "set",
+        "key": "={{ \"session:\" + $node[\"Extrair dados\"].json.phone + \":status\" }}",
+        "value": "={{ JSON.stringify($json) }}",
+        "expire": 86400
       },
-      "continueOnFail": true
+      "credentials": {
+        "redis": {
+          "id": "pqD1PcyYhsWm4i3a",
+          "name": "Kreativ Redis"
+        }
+      }
     },
     {
       "id": "n-route",
@@ -128,11 +273,11 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1120,
+        2100,
         300
       ],
       "parameters": {
-        "jsCode": "const phone = $('Extrair dados').item.json.phone;\nconst message = $('Extrair dados').item.json.message;\nconst pushName = $('Extrair dados').item.json.pushName;\nconst originalPayload = $('Extrair dados').item.json.originalPayload;\n\nlet route = 'deepseek';\n\ntry {\n  const rows = $input.all();\n  const dbRow = rows[0]?.json;\n\n  if (dbRow && dbRow.attendance_status !== undefined) {\n    const status = dbRow.attendance_status;\n    const mod = parseInt(String(dbRow.current_module ?? '0'), 10);\n\n    if (status === 'human') {\n      route = 'paused';\n    } else if (mod > 0) {\n      route = 'builderbot';\n    }\n  }\n} catch(e) {}\n\nreturn [{ json: { phone, message, pushName, originalPayload, route } }];"
+        "jsCode": "const phone = $('Extrair dados').item.json.phone;\nconst message = $('Extrair dados').item.json.message;\nconst pushName = $('Extrair dados').item.json.pushName;\nconst originalPayload = $('Extrair dados').item.json.originalPayload;\n\nlet statusData = null;\n\ntry {\n  // Se veio do Redis\n  if ($('Redis: Get Status').item?.json?.result) {\n    statusData = JSON.parse($('Redis: Get Status').item.json.result);\n  } else {\n    // Se veio do DB\n    statusData = $('Buscar estado no DB').item?.json;\n  }\n} catch(e) {}\n\nlet route = 'deepseek';\n\nif (statusData) {\n  const status = statusData.attendance_status;\n  const mod = parseInt(String(statusData.current_module ?? '0'), 10);\n\n  if (status === 'human') {\n    route = 'paused';\n  } else if (mod > 0) {\n    route = 'builderbot';\n  }\n}\n\nreturn [{ json: { phone, message, pushName, originalPayload, route } }];"
       }
     },
     {
@@ -141,7 +286,7 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3,
       "position": [
-        1340,
+        2300,
         300
       ],
       "parameters": {
@@ -207,7 +352,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1560,
+        2500,
         300
       ],
       "parameters": {
@@ -227,7 +372,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1560,
+        2500,
         480
       ],
       "parameters": {
@@ -240,7 +385,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1780,
+        2700,
         480
       ],
       "parameters": {
@@ -271,11 +416,11 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2000,
+        2900,
         480
       ],
       "parameters": {
-        "jsCode": "const phone = $('Determinar rota').item.json.phone;\nconst choices = $input.item.json.choices;\nconst aiResponse = choices?.[0]?.message?.content ?? 'Desculpe, erro na IA.';\nreturn [{ json: { phone, aiResponse } }];"
+        "jsCode": "const phone = $('Extrair dados').item.json.phone;\nconst choices = $input.item.json.choices;\nconst aiResponse = choices?.[0]?.message?.content ?? 'Desculpe, erro na IA.';\nreturn [{ json: { phone, aiResponse } }];"
       }
     },
     {
@@ -284,7 +429,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2220,
+        3100,
         480
       ],
       "parameters": {
@@ -311,7 +456,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1560,
+        2500,
         100
       ],
       "parameters": {
@@ -343,7 +488,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1780,
+        2700,
         100
       ],
       "parameters": {
@@ -366,7 +511,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2000,
+        2900,
         100
       ],
       "parameters": {
@@ -417,14 +562,87 @@
       "main": [
         [
           {
-            "node": "Buscar estado do usuário",
+            "node": "Redis: Rate Limit",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Buscar estado do usuário": {
+    "Redis: Rate Limit": {
+      "main": [
+        [
+          {
+            "node": "Primeira mensagem?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Primeira mensagem?": {
+      "main": [
+        [
+          {
+            "node": "Redis: Expire Limit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redis: Expire Limit": {
+      "main": [
+        [
+          {
+            "node": "Redis: Get Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redis: Get Status": {
+      "main": [
+        [
+          {
+            "node": "Status em Cache?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Status em Cache?": {
+      "main": [
+        [
+          {
+            "node": "Determinar rota",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Buscar estado no DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar estado no DB": {
+      "main": [
+        [
+          {
+            "node": "Redis: Set Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redis: Set Status": {
       "main": [
         [
           {
