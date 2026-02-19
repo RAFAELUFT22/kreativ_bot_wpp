@@ -13,7 +13,7 @@
             "parameters": {
                 "httpMethod": "POST",
                 "path": "save-progress",
-                "responseMode": "onReceived",
+                "responseMode": "responseNode",
                 "options": {}
             },
             "webhookId": "kreativ-save-progress"
@@ -74,18 +74,23 @@
             }
         },
         {
-            "id": "exec-lead-scoring",
-            "name": "Executar Lead Scoring",
-            "type": "n8n-nodes-base.executeWorkflow",
-            "typeVersion": 1,
+            "id": "http-lead-scoring",
+            "name": "Trigger Lead Scoring",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.1,
             "position": [
                 1120,
                 200
             ],
             "parameters": {
-                "workflowId": "cj1N7ZPVoDxlI7Sk",
+                "method": "POST",
+                "url": "http://localhost:5678/webhook/lead-scoring",
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ phone: $('Extrair e validar dados').item.json.phone, moduleNumber: $('Extrair e validar dados').item.json.moduleId }) }}",
                 "options": {}
-            }
+            },
+            "continueOnFail": true
         },
         {
             "id": "respond",
@@ -140,7 +145,7 @@
             "main": [
                 [
                     {
-                        "node": "Executar Lead Scoring",
+                        "node": "Trigger Lead Scoring",
                         "type": "main",
                         "index": 0
                     }
@@ -154,7 +159,7 @@
                 ]
             ]
         },
-        "Executar Lead Scoring": {
+        "Trigger Lead Scoring": {
             "main": [
                 [
                     {

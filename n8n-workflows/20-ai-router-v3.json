@@ -55,29 +55,32 @@
         },
         {
             "parameters": {
-                "method": "POST",
-                "url": "http://kreativ_builderbot:3008/api/query",
-                "sendBody": true,
-                "specifyBody": "json",
-                "jsonBody": "={{ JSON.stringify({ query: \"SELECT s.name, s.course_id, s.current_module, c.name as course_name FROM students s JOIN courses c ON s.course_id = c.id WHERE s.phone = $1 LIMIT 1\", values: [$node[\"Transformer\"].json.phone] }) }}",
+                "operation": "executeQuery",
+                "query": "SELECT s.name, s.course_id, s.current_module, c.name as course_name FROM students s JOIN courses c ON s.course_id = c.id WHERE s.phone = '{{ $node[\"Transformer\"].json.phone }}' LIMIT 1",
                 "options": {}
             },
-            "id": "get-student-proxy",
-            "name": "Get Student Proxy",
-            "type": "n8n-nodes-base.httpRequest",
-            "typeVersion": 4.1,
+            "id": "pg-get-student",
+            "name": "Get Student Info",
+            "type": "n8n-nodes-base.postgres",
+            "typeVersion": 2.6,
             "position": [
                 550,
                 300
             ],
+            "credentials": {
+                "postgres": {
+                    "id": "lJaeEy4CpHbhgMAp",
+                    "name": "Kreativ PostgreSQL"
+                }
+            },
             "continueOnFail": true
         },
         {
             "parameters": {
-                "jsCode": "const rows = $json.rows || [];\nif (rows.length > 0) return [{ json: rows[0] }];\nreturn [{ json: { name: 'Aluno', course_id: 19, current_module: 1, course_name: 'IA Aplicada' } }];"
+                "jsCode": "const rows = $input.all();\nif (rows.length > 0 && rows[0].json.name) return rows;\nreturn [{ json: { name: 'Aluno', course_id: 19, current_module: 1, course_name: 'IA Aplicada' } }];"
             },
-            "id": "get-student",
-            "name": "Get Student",
+            "id": "get-student-fallback",
+            "name": "Get Student Fallback",
             "type": "n8n-nodes-base.code",
             "typeVersion": 2,
             "position": [
@@ -87,45 +90,51 @@
         },
         {
             "parameters": {
-                "method": "POST",
-                "url": "http://kreativ_builderbot:3008/api/query",
-                "sendBody": true,
-                "specifyBody": "json",
-                "jsonBody": "={{ JSON.stringify({ query: \"SELECT question, answer FROM training_memory WHERE course_id = $1 OR student_phone = $2 ORDER BY created_at DESC LIMIT 2\", values: [$node[\"Get Student\"].json.course_id, $node[\"Transformer\"].json.phone] }) }}",
+                "operation": "executeQuery",
+                "query": "SELECT question, answer FROM training_memory WHERE course_id = '{{ $json.course_id }}' OR student_phone = '{{ $node[\"Transformer\"].json.phone }}' ORDER BY created_at DESC LIMIT 2",
                 "options": {}
             },
-            "id": "fetch-memories",
+            "id": "pg-fetch-memories",
             "name": "Buscar Exemplos (Few-shot)",
-            "type": "n8n-nodes-base.httpRequest",
-            "typeVersion": 4.1,
+            "type": "n8n-nodes-base.postgres",
+            "typeVersion": 2.6,
             "position": [
                 850,
                 450
             ],
+            "credentials": {
+                "postgres": {
+                    "id": "lJaeEy4CpHbhgMAp",
+                    "name": "Kreativ PostgreSQL"
+                }
+            },
             "continueOnFail": true
         },
         {
             "parameters": {
-                "method": "POST",
-                "url": "http://kreativ_builderbot:3008/api/query",
-                "sendBody": true,
-                "specifyBody": "json",
-                "jsonBody": "={{ JSON.stringify({ query: \"SELECT title, content_text as syllabus FROM modules m WHERE m.course_id = $1 AND m.module_number = $2 LIMIT 1\", values: [$node[\"Get Student\"].json.course_id, $node[\"Get Student\"].json.current_module] }) }}",
+                "operation": "executeQuery",
+                "query": "SELECT title, content_text as syllabus FROM modules m WHERE m.course_id = '{{ $json.course_id }}' AND m.module_number = {{ $json.current_module }} LIMIT 1",
                 "options": {}
             },
-            "id": "get-module-proxy",
-            "name": "Get Module Proxy",
-            "type": "n8n-nodes-base.httpRequest",
-            "typeVersion": 4.1,
+            "id": "pg-get-module",
+            "name": "Get Module Info",
+            "type": "n8n-nodes-base.postgres",
+            "typeVersion": 2.6,
             "position": [
                 850,
                 150
             ],
+            "credentials": {
+                "postgres": {
+                    "id": "lJaeEy4CpHbhgMAp",
+                    "name": "Kreativ PostgreSQL"
+                }
+            },
             "continueOnFail": true
         },
         {
             "parameters": {
-                "jsCode": "const redisHistory = $('Redis: Get History').all().map(i => i.json.result).filter(Boolean);\nconst fewShot = $('Buscar Exemplos (Few-shot)').item.json.rows || [];\nconst mod = $('Get Module Proxy').item.json.rows?.[0] || { title: 'Intro', syllabus: 'Geral' };\nconst std = $('Get Student').item.json;\n\n// Redis history comes as array of strings (stringified JSONs)\nlet history = [];\ntry {\n  history = redisHistory.map(h => JSON.parse(h)).reverse();\n} catch(e) {}\n\nconst examples = fewShot.map(m => `P: ${m.question}\\nR: ${m.answer}`).join('\\n---\\n');\n\nreturn [{ \n  json: { \n    syllabus: mod.syllabus, \n    student_name: std.name, \n    course_name: std.course_name,\n    examples,\n    history\n  } \n}];"
+                "jsCode": "const redisHistory = $('Redis: Get History').all().map(i => i.json.result).filter(Boolean);\nconst fewShot = $('Buscar Exemplos (Few-shot)').all().map(i => i.json);\nconst modRows = $('Get Module Info').all();\nconst mod = (modRows.length > 0 && modRows[0].json.title) ? modRows[0].json : { title: 'Intro', syllabus: 'Geral' };\nconst std = $('Get Student Fallback').item.json;\n\n// Redis history comes as array of strings (stringified JSONs)\nlet history = [];\ntry {\n  history = redisHistory.map(h => JSON.parse(h)).reverse();\n} catch(e) {}\n\nconst examples = fewShot.map(m => `P: ${m.question}\\nR: ${m.answer}`).join('\\n---\\n');\n\nreturn [{ \n  json: { \n    syllabus: mod.syllabus, \n    student_name: std.name, \n    course_name: std.course_name,\n    examples,\n    history\n  } \n}];"
             },
             "id": "aggregator",
             "name": "Agregador de Contexto",
@@ -272,25 +281,25 @@
             "main": [
                 [
                     {
-                        "node": "Get Student Proxy",
+                        "node": "Get Student Info",
                         "type": "main",
                         "index": 0
                     }
                 ]
             ]
         },
-        "Get Student Proxy": {
+        "Get Student Info": {
             "main": [
                 [
                     {
-                        "node": "Get Student",
+                        "node": "Get Student Fallback",
                         "type": "main",
                         "index": 0
                     }
                 ]
             ]
         },
-        "Get Student": {
+        "Get Student Fallback": {
             "main": [
                 [
                     {
@@ -299,7 +308,7 @@
                         "index": 0
                     },
                     {
-                        "node": "Get Module Proxy",
+                        "node": "Get Module Info",
                         "type": "main",
                         "index": 0
                     }
@@ -317,7 +326,7 @@
                 ]
             ]
         },
-        "Get Module Proxy": {
+        "Get Module Info": {
             "main": [
                 [
                     {
