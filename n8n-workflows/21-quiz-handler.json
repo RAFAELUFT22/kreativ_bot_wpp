@@ -1,0 +1,175 @@
+{
+  "name": "Kreativ: Quiz Handler",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ai-tutor-v2-unique-rafael",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook",
+      "name": "webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [100, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://kreativ_builderbot:3008/api/query",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ \"query\": \"SELECT s.id as student_id, s.name, s.course_id, s.current_module, m.evaluation_rubric, m.title as module_title FROM students s JOIN modules m ON m.course_id = s.course_id::text AND s.current_module = m.module_number WHERE s.phone = $1 LIMIT 1\", \"values\": [$json.phone] }) }}",
+        "options": {}
+      },
+      "id": "get-context",
+      "name": "Get Student & Rubric",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [300, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.deepseek.com/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer sk-412552782fbe4009a25a013825e6ab66"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  \"model\": \"deepseek-chat\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": `Você é um avaliador pedagógico. Avalie a resposta do aluno com base na RUBRICA abaixo.\\n\\nRUBRICA:\\n${$node[\"Get Student & Rubric\"].json.rows[0]?.evaluation_rubric || 'O aluno deve demonstrar conhecimento geral do módulo.'}\\n\\nResponda APENAS em JSON no formato: { \"score\": 0-100, \"feedback\": \"texto curto\", \"passed\": true/false }. Considere 'passed' true se score >= 70.`\n    },\n    { \"role\": \"user\", \"content\": $node[\"webhook\"].json.body.body }\n  ]\n}) }}",
+        "options": {}
+      },
+      "id": "ai-evaluator",
+      "name": "AI Evaluator",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const content = $node[\"AI Evaluator\"].json.choices[0].message.content;\nconst cleanJson = content.replace(/```json|```/g, '').trim();\nreturn [{ json: JSON.parse(cleanJson) }];"
+      },
+      "id": "parser",
+      "name": "Parse Eval",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [700, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.passed }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "check-passed",
+      "name": "Passou?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://kreativ_builderbot:3008/api/query",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ \"query\": \"INSERT INTO achievements (student_id, course_id, module_number, achievement_type, name, description, token_validation) VALUES ($1, $2, $3, 'medal', $4, $5, $6) ON CONFLICT DO NOTHING\", \"values\": [$node[\"Get Student & Rubric\"].json.rows[0].student_id, $node[\"Get Student & Rubric\"].json.rows[0].course_id, $node[\"Get Student & Rubric\"].json.rows[0].current_module, 'Medalha: ' + $node[\"Get Student & Rubric\"].json.rows[0].module_title, 'Concluiu com sucesso o desafio do módulo.', 'TOKEN-' + $node[\"Get Student & Rubric\"].json.rows[0].student_id.substring(0,8) + '-' + $node[\"Get Student & Rubric\"].json.rows[0].current_module] }) }}",
+        "options": {}
+      },
+      "id": "save-achievement",
+      "name": "Save Achievement",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1100, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://kreativ_builderbot:3008/api/send",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ \"phone\": $node[\"webhook\"].json.body.phone, \"message\": \"🎖️ *CONQUISTA DESBLOQUEADA!*\\n\\nParabéns! Você passou no desafio do módulo: *\" + ($node[\"Get Student & Rubric\"].json.rows[0]?.module_title || 'Módulo Concluído') + \"*\\n\\nSua nota: \" + $node[\"Parse Eval\"].json.score + \"/100\\n\\nSua nova medalha já está disponível no seu portal! Próximo passo: Módulo \" + (($node[\"Get Student & Rubric\"].json.rows[0]?.current_module || 0) + 1) }) }}",
+        "options": {}
+      },
+      "id": "notify-success",
+      "name": "Notify Success",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1300, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://kreativ_builderbot:3008/api/send",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ \"phone\": $node[\"webhook\"].json.body.phone, \"message\": \"💡 *Quase lá!*\\n\\nVocê ainda não atingiu a pontuação mínima para este módulo (70/100).\\n\\n*Feedback da IA:* \" + $node[\"Parse Eval\"].json.feedback + \"\\n\\nNão desanime! Revise o conteúdo com o Tutor IA e tente o desafio novamente quando estiver pronto. 💪\" }) }}",
+        "options": {}
+      },
+      "id": "notify-retry",
+      "name": "Notify Retry",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1100, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { success: true } }];"
+      },
+      "id": "final-response",
+      "name": "Final Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1550, 300]
+    }
+  ],
+  "connections": {
+    "webhook": {
+      "main": [[{"node": "get-context", "type": "main", "index": 0}]]
+    },
+    "get-context": {
+      "main": [[{"node": "ai-evaluator", "type": "main", "index": 0}]]
+    },
+    "ai-evaluator": {
+      "main": [[{"node": "parser", "type": "main", "index": 0}]]
+    },
+    "parser": {
+      "main": [[{"node": "check-passed", "type": "main", "index": 0}]]
+    },
+    "check-passed": {
+      "main": [
+        [{"node": "save-achievement", "type": "main", "index": 0}],
+        [{"node": "notify-retry", "type": "main", "index": 0}]
+      ]
+    },
+    "save-achievement": {
+      "main": [[{"node": "notify-success", "type": "main", "index": 0}]]
+    },
+    "notify-success": {
+      "main": [[{"node": "final-response", "type": "main", "index": 0}]]
+    },
+    "notify-retry": {
+      "main": [[{"node": "final-response", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "saveDataErrorExecution": "all",
+    "saveExecutionProgress": true
+  }
+}

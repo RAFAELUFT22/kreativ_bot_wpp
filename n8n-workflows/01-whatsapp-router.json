@@ -1,5 +1,5 @@
 {
-  "name": "WhatsApp Router - Kreativ Educação",
+  "name": "WhatsApp Router - Kreativ Educa\u00e7\u00e3o",
   "nodes": [
     {
       "id": "n-webhook",
@@ -13,96 +13,71 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "whatsapp",
-        "responseMode": "responseNode",
-        "options": {}
+        "responseMode": "responseNode"
       },
-      "webhookId": "whatsapp-kreativ-bot"
+      "webhookId": "whatsapp-router-prod-v3"
     },
     {
-      "id": "n-filter",
-      "name": "É mensagem válida?",
-      "type": "n8n-nodes-base.if",
+      "id": "n-logic",
+      "name": "Validação & Extração",
+      "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        380,
+        400,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const body = $json.body || {};\nconst event = body.event || '';\nconst data = body.data || {};\n\nif (event !== 'messages.upsert') {\n    return []; // Descarta se não for mensagem de entrada\n}\n\nconst remoteJid = data.key?.remoteJid || '';\nconst phone = remoteJid.split('@')[0];\nconst message = data.message?.conversation || '';\nconst pushName = data.pushName || 'Aluno';\nconst messageId = data.key?.id || '';\n\nif (!phone || !message) {\n    return []; // Descarta se faltar dados essenciais\n}\n\nreturn [{ json: { phone, message, pushName, messageId } }];"
+      }
+    },
+    {
+      "parameters": {
+        "operation": "set",
+        "key": "={{ \"msg_id:\" + $json.messageId }}",
+        "value": "1",
+        "expire": true,
+        "ttl": 600
+      },
+      "id": "rd-idempotency",
+      "name": "Redis: Idempotência",
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        740,
+        300
+      ],
+      "credentials": {
+        "redis": {
+          "id": "GDNQ9fUq1chyneTT",
+          "name": "Kreativ Redis V4"
+        }
+      }
+    },
+    {
+      "id": "if-new-msg",
+      "name": "É nova mensagem?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        920,
         300
       ],
       "parameters": {
         "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 1
-          },
-          "conditions": [
+          "boolean": [],
+          "number": [],
+          "string": [
             {
-              "id": "cond-event",
-              "leftValue": "={{ $json.body.event }}",
-              "rightValue": "messages.upsert",
-              "operator": {
-                "type": "string",
-                "operation": "equals"
-              }
-            },
-            {
-              "id": "cond-fromme",
-              "leftValue": "={{ String($json.body.data.key.fromMe) }}",
-              "rightValue": "false",
-              "operator": {
-                "type": "string",
-                "operation": "equals"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      }
-    },
-    {
-      "id": "n-extract",
-      "name": "Extrair dados",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        560,
-        300
-      ],
-      "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "assign-phone",
-              "name": "phone",
-              "value": "={{ $json.body.data.key.remoteJid.split('@')[0] }}",
-              "type": "string"
-            },
-            {
-              "id": "assign-message",
-              "name": "message",
-              "value": "={{ $json.body.data.message?.conversation ?? $json.body.data.message?.extendedTextMessage?.text ?? '' }}",
-              "type": "string"
-            },
-            {
-              "id": "assign-pushname",
-              "name": "pushName",
-              "value": "={{ $json.body.data.pushName ?? 'Aluno' }}",
-              "type": "string"
-            },
-            {
-              "id": "assign-payload",
-              "name": "originalPayload",
-              "value": "={{ $json.body }}",
-              "type": "object"
+              "value1": "={{ $json.key }}",
+              "operation": "notEqual",
+              "value2": ""
             }
           ]
-        },
-        "options": {}
+        }
       }
     },
     {
-      "id": "n-respond-early",
+      "id": "early-ok",
       "name": "Responder OK",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
@@ -116,437 +91,159 @@
       }
     },
     {
-      "id": "rd-rate-limit",
-      "name": "Redis: Rate Limit",
-      "type": "n8n-nodes-base.redis",
-      "typeVersion": 1,
-      "position": [
-        740,
-        300
-      ],
       "parameters": {
-        "operation": "increment",
-        "key": "={{ \"rate_limit:\" + $json.phone }}"
+        "operation": "push",
+        "list": "={{ \"buffer:\" + $json.phone }}",
+        "messageData": "={{ $json.message }}",
+        "tail": true
       },
-      "credentials": {
-        "redis": {
-          "id": "GDNQ9fUq1chyneTT",
-          "name": "Kreativ Redis"
-        }
-      }
-    },
-    {
-      "id": "if-first",
-      "name": "Primeira mensagem?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        920,
-        300
-      ],
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 1
-          },
-          "conditions": [
-            {
-              "id": "cond-first",
-              "leftValue": "={{ $json.result }}",
-              "rightValue": 1,
-              "operator": {
-                "type": "number",
-                "operation": "equals"
-              }
-            }
-          ],
-          "combinator": "and"
-        }
-      }
-    },
-    {
-      "id": "rd-expire-limit",
-      "name": "Redis: Expire Limit",
+      "id": "rd-push",
+      "name": "Redis: Push Buffer",
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
         1100,
-        200
+        300
       ],
-      "parameters": {
-        "operation": "expire",
-        "key": "={{ \"rate_limit:\" + $node[\"Extrair dados\"].json.phone }}",
-        "seconds": 3
-      },
       "credentials": {
         "redis": {
           "id": "GDNQ9fUq1chyneTT",
-          "name": "Kreativ Redis"
+          "name": "Kreativ Redis V4"
         }
       }
     },
     {
-      "id": "rd-get-status",
-      "name": "Redis: Get Status",
+      "parameters": {
+        "operation": "llen",
+        "list": "={{ \"buffer:\" + $json.phone }}"
+      },
+      "id": "rd-llen",
+      "name": "Redis: Tamanho",
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        1300,
+        1250,
         300
       ],
-      "parameters": {
-        "operation": "get",
-        "key": "={{ \"session:\" + $node[\"Extrair dados\"].json.phone + \":status\" }}"
-      },
       "credentials": {
         "redis": {
           "id": "GDNQ9fUq1chyneTT",
-          "name": "Kreativ Redis"
+          "name": "Kreativ Redis V4"
         }
       }
     },
     {
-      "id": "if-cached",
-      "name": "Status em Cache?",
-      "type": "n8n-nodes-base.if",
+      "parameters": {
+        "jsCode": "return [{ json: { value: Object.values($json)[0] } }];"
+      },
+      "id": "rd-norm",
+      "name": "Redis: Normalizar",
+      "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1500,
+        1430,
         300
+      ]
+    },
+    {
+      "id": "if-burst",
+      "name": "Início do Burst?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1610,
+        165
       ],
       "parameters": {
         "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 1
-          },
-          "conditions": [
+          "boolean": [],
+          "number": [
             {
-              "id": "cond-cache",
-              "leftValue": "={{ $json.result }}",
-              "operator": {
-                "type": "string",
-                "operation": "notEmpty"
-              }
+              "value1": "={{ $json.value }}",
+              "operation": "equal",
+              "value2": 1
             }
           ],
-          "combinator": "and"
+          "string": []
         }
       }
     },
     {
-      "id": "n-db",
-      "name": "Buscar estado no DB",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.6,
+      "id": "wait-burst",
+      "name": "Aguardar rajada",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
       "position": [
-        1700,
-        400
+        1790,
+        200
       ],
       "parameters": {
-        "operation": "executeQuery",
-        "query": "SELECT COALESCE(s.attendance_status, 'bot') as attendance_status, COALESCE(s.current_module, 0) as current_module FROM (SELECT 1) t LEFT JOIN students s ON s.phone = '{{ $node[\"Extrair dados\"].json.phone }}' LIMIT 1",
-        "options": {}
-      },
-      "credentials": {
-        "postgres": {
-          "id": "lJaeEy4CpHbhgMAp",
-          "name": "Kreativ PostgreSQL"
-        }
+        "amount": 4,
+        "unit": "seconds"
       }
     },
     {
-      "id": "rd-set-status",
-      "name": "Redis: Set Status",
+      "id": "rd-get",
+      "name": "Redis: Get Buffer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1980,
+        200
+      ],
+      "parameters": {
+        "jsCode": "const net = require('net');\nconst phone = $('Validação & Extração').item.json.phone;\nreturn new Promise((resolve) => {\n    const client = new net.Socket();\n    client.connect(6379, 'kreativ_redis', () => {\n        // Auth and LRANGE in one go\n        const auth = '*2\\r\\n$4\\r\\nAUTH\\r\\n$24\\r\\nkNiaYOxriWOcSiZyXhb5C9LU\\r\\n';\n        const cmd = '*4\\r\\n$6\\r\\nLRANGE\\r\\n$'+Buffer.byteLength('buffer:'+phone)+'\\r\\nbuffer:'+phone+'\\r\\n$1\\r\\n0\\r\\n$2\\r\\n-1\\r\\n';\n        client.write(auth + cmd);\n    });\n    let buf = '';\n    client.on('data', (data) => {\n        buf += data.toString();\n        // Wait for both +OK for auth and the * result for LRANGE\n        if (buf.includes('+OK\\r\\n') && buf.includes('*')) {\n            const afterAuth = buf.substring(buf.indexOf('+OK\\r\\n') + 5);\n            const lines = afterAuth.split('\\r\\n');\n            if (lines.length > 2 && lines[0].startsWith('*')) {\n                const count = parseInt(lines[0].substring(1), 10);\n                const res = [];\n                for(let i=0; i<count; i++) res.push(lines[2 + i*2]);\n                resolve([{ json: { result: res } }]);\n                client.destroy();\n            }\n        }\n    });\n    client.on('error', () => { resolve([{ json: { result: [] } }]); client.destroy(); });\n    setTimeout(() => { if (!client.destroyed) { resolve([{ json: { result: [] } }]); client.destroy(); } }, 4000);\n});"
+      }
+    },
+    {
+      "id": "n-concat",
+      "name": "Concatenar mensagens",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2160,
+        200
+      ],
+      "parameters": {
+        "jsCode": "const results = $('Redis: Get Buffer').item.json.result || [];\nreturn [{ json: { phone: $('Validação & Extração').item.json.phone, message: results.join(' ') } }];"
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "key": "={{ \"buffer:\" + $json.phone }}"
+      },
+      "id": "rd-del",
+      "name": "Redis: Limpar Buffer",
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        1900,
-        400
+        2340,
+        200
       ],
-      "parameters": {
-        "operation": "set",
-        "key": "={{ \"session:\" + $node[\"Extrair dados\"].json.phone + \":status\" }}",
-        "value": "={{ JSON.stringify($json) }}",
-        "expire": 86400
-      },
       "credentials": {
         "redis": {
           "id": "GDNQ9fUq1chyneTT",
-          "name": "Kreativ Redis"
+          "name": "Kreativ Redis V4"
         }
       }
     },
     {
-      "id": "n-route",
-      "name": "Determinar rota",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        2100,
-        300
-      ],
-      "parameters": {
-        "jsCode": "const phone = $('Extrair dados').item.json.phone;\nconst message = $('Extrair dados').item.json.message;\nconst pushName = $('Extrair dados').item.json.pushName;\nconst originalPayload = $('Extrair dados').item.json.originalPayload;\n\nlet statusData = null;\n\ntry {\n  // Se veio do Redis\n  if ($('Redis: Get Status').item?.json?.result) {\n    statusData = JSON.parse($('Redis: Get Status').item.json.result);\n  } else {\n    // Se veio do DB\n    statusData = $('Buscar estado no DB').item?.json;\n  }\n} catch(e) {}\n\nlet route = 'deepseek';\n\nif (statusData) {\n  const status = statusData.attendance_status;\n  const mod = parseInt(String(statusData.current_module ?? '0'), 10);\n\n  if (status === 'human') {\n    route = 'paused';\n  } else if (mod > 0) {\n    route = 'builderbot';\n  }\n}\n\nreturn [{ json: { phone, message, pushName, originalPayload, route } }];"
-      }
-    },
-    {
-      "id": "n-switch",
-      "name": "Rotear mensagem",
-      "type": "n8n-nodes-base.switch",
-      "typeVersion": 3,
-      "position": [
-        2300,
-        300
-      ],
-      "parameters": {
-        "mode": "rules",
-        "rules": {
-          "values": [
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "strict"
-                },
-                "conditions": [
-                  {
-                    "id": "rule-paused",
-                    "leftValue": "={{ $json.route }}",
-                    "rightValue": "paused",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    }
-                  }
-                ],
-                "combinator": "and"
-              },
-              "renameOutput": true,
-              "outputKey": "Paused"
-            },
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "strict"
-                },
-                "conditions": [
-                  {
-                    "id": "rule-builderbot",
-                    "leftValue": "={{ $json.route }}",
-                    "rightValue": "builderbot",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    }
-                  }
-                ],
-                "combinator": "and"
-              },
-              "renameOutput": true,
-              "outputKey": "BuilderBot"
-            }
-          ]
-        },
-        "options": {
-          "fallbackOutput": "extra"
-        }
-      }
-    },
-    {
-      "id": "n-builderbot",
-      "name": "Encaminhar BuilderBot",
+      "id": "ai-tutor",
+      "name": "AI Tutor V3",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "typeVersion": 4.1,
       "position": [
-        2500,
-        300
+        2520,
+        200
       ],
       "parameters": {
         "method": "POST",
-        "url": "http://kreativ_builderbot:3008/webhook",
+        "url": "http://localhost:5678/webhook/ai-tutor-v2-unique-rafael",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json.originalPayload) }}",
-        "options": {
-          "timeout": 30000
-        }
-      }
-    },
-    {
-      "id": "n-deepseek-payload",
-      "name": "Montar payload DeepSeek",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        2500,
-        480
-      ],
-      "parameters": {
-        "jsCode": "const message = $input.item.json.message;\nconst pushName = $input.item.json.pushName;\n\nreturn [{\n  json: {\n    phone: $input.item.json.phone,\n    message,\n    pushName,\n    deepseekPayload: {\n      model: \"deepseek-chat\",\n      messages: [\n        { role: \"system\", content: \"Você é um assistente educacional da Kreativ Educação, plataforma de ensino via WhatsApp.\\n\\nRegras:\\n- Responda sempre em português brasileiro\\n- Seja amigável, didático e encorajador\\n- Respostas concisas (máximo 3 parágrafos para WhatsApp)\\n- Se o aluno quiser aprender, diga que ele pode responder MODULO para iniciar a trilha estruturada\\n- Se não souber algo específico, diga que verificará com a equipe\" },\n        { role: \"user\", content: message }\n      ],\n      temperature: 0.7\n    }\n  }\n}];"
-      }
-    },
-    {
-      "id": "n-deepseek",
-      "name": "DeepSeek AI",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        2700,
-        480
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "https://api.deepseek.com/chat/completions",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "Bearer sk-412552782fbe4009a25a013825e6ab66"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json.deepseekPayload) }}",
+        "jsonBody": "={{ JSON.stringify({ phone: $json.phone, body: $json.message }) }}",
         "options": {}
-      }
-    },
-    {
-      "id": "n-extract-ai",
-      "name": "Extrair resposta IA",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        2900,
-        480
-      ],
-      "parameters": {
-        "jsCode": "const phone = $('Extrair dados').item.json.phone;\nconst choices = $input.item.json.choices;\nconst aiResponse = choices?.[0]?.message?.content ?? 'Desculpe, erro na IA.';\nreturn [{ json: { phone, aiResponse } }];"
-      }
-    },
-    {
-      "id": "n-send",
-      "name": "Enviar resposta WhatsApp",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        3100,
-        480
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "http://kreativ_evolution:8080/message/sendText/europs",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "apikey",
-              "value": "EXr5OuEE2sBMbRo94LtWQfofvEF1gHUM"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ number: $json.phone, text: $json.aiResponse }) }}",
-        "options": {}
-      }
-    },
-    {
-      "id": "cw-search",
-      "name": "Buscar Contato CW",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        2500,
-        100
-      ],
-      "parameters": {
-        "method": "GET",
-        "url": "http://chatwoot-app:3000/api/v1/accounts/2/contacts/search",
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "q",
-              "value": "={{ $('Extrair dados').item.json.phone }}"
-            }
-          ]
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "api_access_token",
-              "value": "hh5bHLwTRyKoqZzAvaPUUm5v"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "id": "cw-find-conv",
-      "name": "Buscar Conversas Contato",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        2700,
-        100
-      ],
-      "parameters": {
-        "method": "GET",
-        "url": "={{ 'http://chatwoot-app:3000/api/v1/accounts/2/contacts/' + $json.payload[0].id + '/conversations' }}",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "api_access_token",
-              "value": "hh5bHLwTRyKoqZzAvaPUUm5v"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "id": "cw-send",
-      "name": "Enviar p/ Chatwoot",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        2900,
-        100
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "={{ 'http://chatwoot-app:3000/api/v1/accounts/2/conversations/' + $json.payload[0].id + '/messages' }}",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ content: $('Extrair dados').item.json.message, message_type: 'incoming', private: false }) }}",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "api_access_token",
-              "value": "hh5bHLwTRyKoqZzAvaPUUm5v"
-            }
-          ]
-        },
-        "options": {
-          "ignoreResponseCode": true
-        }
       }
     }
   ],
@@ -555,29 +252,18 @@
       "main": [
         [
           {
-            "node": "É mensagem válida?",
+            "node": "Validação & Extração",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "É mensagem válida?": {
+    "Validação & Extração": {
       "main": [
         [
           {
-            "node": "Extrair dados",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Extrair dados": {
-      "main": [
-        [
-          {
-            "node": "Redis: Rate Limit",
+            "node": "Redis: Idempotência",
             "type": "main",
             "index": 0
           },
@@ -589,175 +275,117 @@
         ]
       ]
     },
-    "Redis: Rate Limit": {
+    "Redis: Idempotência": {
       "main": [
         [
           {
-            "node": "Primeira mensagem?",
+            "node": "É nova mensagem?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Primeira mensagem?": {
+    "É nova mensagem?": {
       "main": [
         [
           {
-            "node": "Redis: Expire Limit",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Redis: Expire Limit": {
-      "main": [
-        [
-          {
-            "node": "Redis: Get Status",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Redis: Get Status": {
-      "main": [
-        [
-          {
-            "node": "Status em Cache?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Status em Cache?": {
-      "main": [
-        [
-          {
-            "node": "Determinar rota",
+            "node": "Redis: Push Buffer",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Buscar estado no DB",
+            "node": "Responder OK",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Buscar estado no DB": {
+    "Redis: Push Buffer": {
       "main": [
         [
           {
-            "node": "Redis: Set Status",
+            "node": "Redis: Tamanho",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Redis: Set Status": {
+    "Redis: Tamanho": {
       "main": [
         [
           {
-            "node": "Determinar rota",
+            "node": "Redis: Normalizar",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Determinar rota": {
+    "Redis: Normalizar": {
       "main": [
         [
           {
-            "node": "Rotear mensagem",
+            "node": "Início do Burst?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Rotear mensagem": {
+    "Início do Burst?": {
       "main": [
         [
           {
-            "node": "Buscar Contato CW",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Encaminhar BuilderBot",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Montar payload DeepSeek",
+            "node": "Aguardar rajada",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Montar payload DeepSeek": {
+    "Aguardar rajada": {
       "main": [
         [
           {
-            "node": "DeepSeek AI",
+            "node": "Redis: Get Buffer",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "DeepSeek AI": {
+    "Redis: Get Buffer": {
       "main": [
         [
           {
-            "node": "Extrair resposta IA",
+            "node": "Concatenar mensagens",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Extrair resposta IA": {
+    "Concatenar mensagens": {
       "main": [
         [
           {
-            "node": "Enviar resposta WhatsApp",
+            "node": "Redis: Limpar Buffer",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Buscar Contato CW": {
+    "Redis: Limpar Buffer": {
       "main": [
         [
           {
-            "node": "Buscar Conversas Contato",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Buscar Conversas Contato": {
-      "main": [
-        [
-          {
-            "node": "Enviar p/ Chatwoot",
+            "node": "AI Tutor V3",
             "type": "main",
             "index": 0
           }
@@ -768,6 +396,8 @@
   "settings": {
     "executionOrder": "v1",
     "saveManualExecutions": true,
+    "saveDataErrorExecution": "all",
+    "saveExecutionProgress": true,
     "callerPolicy": "workflowsFromSameOwner"
   }
 }

@@ -1,0 +1,385 @@
+{
+  "name": "Kreativ: AI Adaptive Router V2",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trig-exec",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [100, 150]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ai-tutor-v2-unique-rafael",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook-final",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [100, 300],
+      "webhookId": "kreativ-ai-tutor-v30"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body || $json;\nreturn [{\n  json: {\n    phone: input.phone || 'no-phone',\n    body: input.body || 'Oi',\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "transformer",
+      "name": "Transformer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.body.toUpperCase() }}",
+              "operation": "contains",
+              "value2": "QUIZZ"
+            }
+          ]
+        }
+      },
+      "id": "is-quizz",
+      "name": "É QUIZZ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [400, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://kreativ_builderbot:3008/api/query",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ \"query\": \"SELECT s.id as student_id, s.name, s.course_id, s.current_module, s.attendance_status, c.name as course_name, m.evaluation_rubric, m.title as module_title FROM students s JOIN courses c ON s.course_id = c.id JOIN modules m ON m.course_id = s.course_id::text AND s.current_module = m.module_number WHERE s.phone = $1 LIMIT 1\", \"values\": [$node[\"Transformer\"].json.phone] }) }}",
+        "options": {}
+      },
+      "id": "get-student-data",
+      "name": "Get Student Data",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [600, 100],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.deepseek.com/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer sk-412552782fbe4009a25a013825e6ab66"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  \"model\": \"deepseek-chat\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": `Você é um avaliador pedagógico. Avalie a resposta do aluno com base na RUBRICA abaixo.\\n\\nRUBRICA:\\n${$node[\"Get Student Data\"].json.rows[0]?.evaluation_rubric || 'O aluno deve demonstrar conhecimento geral do módulo.'}\\n\\nResponda APENAS em JSON no formato: { \"score\": 0-100, \"feedback\": \"texto curto\", \"passed\": true/false }. Considere 'passed' true se score >= 70.`\n    },\n    { \"role\": \"user\", \"content\": $node[\"Transformer\"].json.body }\n  ]\n}) }}",
+        "options": {}
+      },
+      "id": "ai-evaluator",
+      "name": "AI Evaluator",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [800, 100]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const content = $node[\"AI Evaluator\"].json.choices[0].message.content;\nconst cleanJson = content.replace(/```json|```/g, '').trim();\nreturn [{ json: JSON.parse(cleanJson) }];"
+      },
+      "id": "parser",
+      "name": "Parse Eval",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1000, 100]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.passed }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "check-passed",
+      "name": "Passou?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1200, 100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://kreativ_builderbot:3008/api/query",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ \"query\": \"INSERT INTO achievements (student_id, course_id, module_number, achievement_type, name, description, token_validation) VALUES ($1, $2, $3, 'medal', $4, $5, $6) ON CONFLICT DO NOTHING\", \"values\": [$node[\"Get Student Data\"].json.rows[0].student_id, $node[\"Get Student Data\"].json.rows[0].course_id, $node[\"Get Student Data\"].json.rows[0].current_module, 'Medalha: ' + $node[\"Get Student Data\"].json.rows[0].module_title, 'Concluiu com sucesso o desafio do módulo.', 'TOKEN-' + $node[\"Get Student Data\"].json.rows[0].student_id.substring(0,8) + '-' + $node[\"Get Student Data\"].json.rows[0].current_module] }) }}",
+        "options": {}
+      },
+      "id": "save-achievement",
+      "name": "Save Achievement",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1400, 50]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://kreativ_builderbot:3008/api/send",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ \"phone\": $node[\"Transformer\"].json.phone, \"message\": \"🎖️ *CONQUISTA DESBLOQUEADA!*\\n\\nParabéns! Você passou no desafio do módulo: *\" + ($node[\"Get Student Data\"].json.rows[0]?.module_title || 'Módulo Concluído') + \"*\\n\\nSua nota: \" + $node[\"Parse Eval\"].json.score + \"/100\\n\\nSua nova medalha já está disponível no seu portal! Próximo passo: Módulo \" + (($node[\"Get Student Data\"].json.rows[0]?.current_module || 0) + 1) }) }}",
+        "options": {}
+      },
+      "id": "notify-success",
+      "name": "Notify Success",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1600, 50]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://kreativ_builderbot:3008/api/send",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ \"phone\": $node[\"Transformer\"].json.phone, \"message\": \"💡 *Quase lá!*\\n\\nVocê ainda não atingiu a pontuação mínima para este módulo (70/100).\\n\\n*Feedback da IA:* \" + $node[\"Parse Eval\"].json.feedback + \"\\n\\nNão desanime! Revise o conteúdo com o Tutor IA e tente o desafio novamente quando estiver pronto. 💪\" }) }}",
+        "options": {}
+      },
+      "id": "notify-retry",
+      "name": "Notify Retry",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1400, 150]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://kreativ_builderbot:3008/api/query",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ \"query\": \"SELECT s.name, s.course_id, s.current_module, s.attendance_status, c.name as course_name FROM students s JOIN courses c ON s.course_id = c.id WHERE s.phone = $1 LIMIT 1\", \"values\": [$node[\"Transformer\"].json.phone] }) }}",
+        "options": {}
+      },
+      "id": "get-student-proxy",
+      "name": "Get Student Proxy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [600, 400],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $json.rows || [];\nif (rows.length > 0) return [{ json: rows[0] }];\nreturn [{ json: { name: 'Aluno', course_id: 19, current_module: 1, course_name: 'IA Aplicada', attendance_status: 'bot' } }];"
+      },
+      "id": "get-student-v30",
+      "name": "Get Student",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [750, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.attendance_status }}",
+              "operation": "equal",
+              "value2": "human"
+            }
+          ]
+        }
+      },
+      "id": "if-human",
+      "name": "É Atendimento Humano?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [900, 400]
+    },
+    {
+      "parameters": {},
+      "id": "human-stop",
+      "name": "Human Stop",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1100, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://kreativ_builderbot:3008/api/query",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ \"query\": \"SELECT title, content_text as syllabus FROM modules m WHERE m.course_id = $1::text AND m.module_number = $2 LIMIT 1\", \"values\": [$node[\"Get Student\"].json.course_id, $node[\"Get Student\"].json.current_module] }) }}",
+        "options": {}
+      },
+      "id": "get-module-proxy",
+      "name": "Get Module Proxy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1100, 500],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://kreativ_builderbot:3008/api/query",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ \"query\": \"SELECT question, answer FROM training_memory WHERE course_id = $1::text OR student_phone = $2 ORDER BY created_at DESC LIMIT 3\", \"values\": [$node[\"Get Student\"].json.course_id, $node[\"Transformer\"].json.phone] }) }}",
+        "options": {}
+      },
+      "id": "fetch-memories",
+      "name": "Buscar Memórias (RLHF)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1100, 650],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "let memories = [];\ntry {\n  memories = $(\"Buscar Memórias (RLHF)\").first().json.rows || [];\n} catch (e) {}\n\nlet mod = { title: 'Intro', syllabus: 'Geral' };\ntry {\n  mod = $(\"Get Module Proxy\").first().json.rows?.[0] || mod;\n} catch (e) {}\n\nconst std = $(\"Get Student\").first().json;\n\nconst formattedMemories = memories.map(m => `P: ${m.question}\\nR: ${m.answer}`).join('\\n---\\n');\n\nreturn [{ \n  json: {\n    syllabus: mod.syllabus, \n    student_name: std.name, \n    course_name: std.course_name,\n    memories: formattedMemories\n  } \n}];"
+      },
+      "id": "aggregator",
+      "name": "Agregador de Contexto",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1300, 575]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.deepseek.com/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer sk-412552782fbe4009a25a013825e6ab66"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  \"model\": \"deepseek-chat\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": `Você é o Tutor IA da Kreativ Educação para o curso: ${$json.course_name}.\\nALUNO: ${$json.student_name}\\n\\nDIRETRIZES ESTRITAS:\\n1. Você SÓ pode responder sobre o curso ${$json.course_name}.\\n2. Se o aluno perguntar sobre outros temas, diga educadamente que seu foco é ${$json.course_name}.\\n3. Use o tom de voz dos exemplos abaixo (RLHF):\\n${$json.memories}\\n\\nEMENTA ATUAL:\\n${$json.syllabus}`\n    },\n    { \"role\": \"user\", \"content\": $node[\"Transformer\"].json.body }\n  ]\n}) }}",
+        "options": {}
+      },
+      "id": "deepseek-ai",
+      "name": "DeepSeek AI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1500, 575]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://kreativ_builderbot:3008/api/send",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ \"phone\": $node[\"Transformer\"].json.phone, \"message\": $json.choices[0].message.content }) }}",
+        "options": {}
+      },
+      "id": "send-wa",
+      "name": "Send WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1700, 575]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { success: true } }];"
+      },
+      "id": "final-response",
+      "name": "Final Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1900, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{"node": "Transformer", "type": "main", "index": 0}]]
+    },
+    "Transformer": {
+      "main": [[{"node": "É QUIZZ?", "type": "main", "index": 0}]]
+    },
+    "É QUIZZ?": {
+      "main": [
+        [{"node": "Get Student Data", "type": "main", "index": 0}],
+        [{"node": "Get Student Proxy", "type": "main", "index": 0}]
+      ]
+    },
+    "Get Student Data": {
+      "main": [[{"node": "AI Evaluator", "type": "main", "index": 0}]]
+    },
+    "AI Evaluator": {
+      "main": [[{"node": "Parse Eval", "type": "main", "index": 0}]]
+    },
+    "Parse Eval": {
+      "main": [[{"node": "Passou?", "type": "main", "index": 0}]]
+    },
+    "Passou?": {
+      "main": [
+        [{"node": "Save Achievement", "type": "main", "index": 0}],
+        [{"node": "Notify Retry", "type": "main", "index": 0}]
+      ]
+    },
+    "Save Achievement": {
+      "main": [[{"node": "Notify Success", "type": "main", "index": 0}]]
+    },
+    "Notify Success": {
+      "main": [[{"node": "Final Response", "type": "main", "index": 0}]]
+    },
+    "Notify Retry": {
+      "main": [[{"node": "Final Response", "type": "main", "index": 0}]]
+    },
+    "Get Student Proxy": {
+      "main": [[{"node": "Get Student", "type": "main", "index": 0}]]
+    },
+    "Get Student": {
+      "main": [[{"node": "É Atendimento Humano?", "type": "main", "index": 0}]]
+    },
+    "É Atendimento Humano?": {
+      "main": [
+        [{"node": "Human Stop", "type": "main", "index": 0}],
+        [
+          {"node": "Get Module Proxy", "type": "main", "index": 0},
+          {"node": "Buscar Memórias (RLHF)", "type": "main", "index": 0}
+        ]
+      ]
+    },
+    "Get Module Proxy": {
+      "main": [[{"node": "Agregador de Contexto", "type": "main", "index": 0}]]
+    },
+    "Buscar Memórias (RLHF)": {
+      "main": [[{"node": "Agregador de Contexto", "type": "main", "index": 0}]]
+    },
+    "Agregador de Contexto": {
+      "main": [[{"node": "DeepSeek AI", "type": "main", "index": 0}]]
+    },
+    "DeepSeek AI": {
+      "main": [[{"node": "Send WhatsApp", "type": "main", "index": 0}]]
+    },
+    "Send WhatsApp": {
+      "main": [[{"node": "Final Response", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "saveDataErrorExecution": "all",
+    "saveExecutionProgress": true
+  }
+}

@@ -2,10 +2,21 @@
     "name": "Kreativ: AI Adaptive Router V2",
     "nodes": [
         {
+            "parameters": {},
+            "id": "trig-exec",
+            "name": "Execute Workflow Trigger",
+            "type": "n8n-nodes-base.executeWorkflowTrigger",
+            "typeVersion": 1,
+            "position": [
+                100,
+                150
+            ]
+        },
+        {
             "parameters": {
                 "httpMethod": "POST",
-                "path": "ai-tutor-v2",
-                "responseMode": "onReceived",
+                "path": "ai-tutor-v2-unique-rafael",
+                "responseMode": "lastNode",
                 "options": {}
             },
             "id": "webhook-final",
@@ -37,7 +48,7 @@
                 "url": "http://kreativ_builderbot:3008/api/query",
                 "sendBody": true,
                 "specifyBody": "json",
-                "jsonBody": "={{ JSON.stringify({ query: \"SELECT s.name, s.course_id, s.current_module, c.name as course_name FROM students s JOIN courses c ON s.course_id = c.id WHERE s.phone = $1 LIMIT 1\", values: [$node[\"Transformer\"].json.phone] }) }}",
+                "jsonBody": "={{ JSON.stringify({ query: \"SELECT s.name, s.course_id, s.current_module, s.attendance_status, c.name as course_name FROM students s JOIN courses c ON s.course_id = c.id WHERE s.phone = $1 LIMIT 1\", values: [$node[\"Transformer\"].json.phone] }) }}",
                 "options": {}
             },
             "id": "get-student-proxy",
@@ -52,7 +63,7 @@
         },
         {
             "parameters": {
-                "jsCode": "const rows = $json.rows || [];\nif (rows.length > 0) return [{ json: rows[0] }];\nreturn [{ json: { name: 'Aluno', course_id: 19, current_module: 1, course_name: 'IA Aplicada' } }];"
+                "jsCode": "const rows = $json.rows || [];\nif (rows.length > 0) return [{ json: rows[0] }];\nreturn [{ json: { name: 'Aluno', course_id: 19, current_module: 1, course_name: 'IA Aplicada', attendance_status: 'bot' } }];"
             },
             "id": "get-student-v30",
             "name": "Get Student",
@@ -61,6 +72,40 @@
             "position": [
                 550,
                 300
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "boolean": [],
+                    "number": [],
+                    "string": [
+                        {
+                            "value1": "={{ $json.attendance_status }}",
+                            "operation": "equal",
+                            "value2": "human"
+                        }
+                    ]
+                }
+            },
+            "id": "if-human",
+            "name": "É Atendimento Humano?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 1,
+            "position": [
+                750,
+                300
+            ]
+        },
+        {
+            "parameters": {},
+            "id": "human-stop",
+            "name": "Human Stop",
+            "type": "n8n-nodes-base.noOp",
+            "typeVersion": 1,
+            "position": [
+                950,
+                150
             ]
         },
         {
@@ -77,7 +122,7 @@
             "type": "n8n-nodes-base.httpRequest",
             "typeVersion": 4.1,
             "position": [
-                700,
+                950,
                 450
             ],
             "continueOnFail": true
@@ -96,22 +141,22 @@
             "type": "n8n-nodes-base.httpRequest",
             "typeVersion": 4.1,
             "position": [
-                700,
-                150
+                950,
+                300
             ],
             "continueOnFail": true
         },
         {
             "parameters": {
-                "jsCode": "const memories = $('Buscar Memórias (RLHF)').item.json.rows || [];\nconst mod = $('Get Module Proxy').item.json.rows?.[0] || { title: 'Intro', syllabus: 'Geral' };\nconst std = $('Get Student').item.json;\n\nconst formattedMemories = memories.map(m => `P: ${m.question}\\nR: ${m.answer}`).join('\\n---\\n');\n\nreturn [{ \n  json: { \n    syllabus: mod.syllabus, \n    student_name: std.name, \n    course_name: std.course_name,\n    memories: formattedMemories\n  } \n}];"
+                "jsCode": "let memories = [];\ntry {\n  memories = $(\"Buscar Memórias (RLHF)\").first().json.rows || [];\n} catch (e) {}\n\nlet mod = { title: 'Intro', syllabus: 'Geral' };\ntry {\n  mod = $(\"Get Module Proxy\").first().json.rows?.[0] || mod;\n} catch (e) {}\n\nconst std = $(\"Get Student\").first().json;\n\nconst formattedMemories = memories.map(m => `P: ${m.question}\\nR: ${m.answer}`).join('\\n---\\n');\n\nreturn [{ \n  json: {\n    syllabus: mod.syllabus, \n    student_name: std.name, \n    course_name: std.course_name,\n    memories: formattedMemories\n  } \n}];"
             },
             "id": "aggregator",
             "name": "Agregador de Contexto",
             "type": "n8n-nodes-base.code",
             "typeVersion": 2,
             "position": [
-                900,
-                300
+                1150,
+                375
             ]
         },
         {
@@ -137,8 +182,8 @@
             "type": "n8n-nodes-base.httpRequest",
             "typeVersion": 4.2,
             "position": [
-                1100,
-                300
+                1350,
+                375
             ]
         },
         {
@@ -154,12 +199,23 @@
             "type": "n8n-nodes-base.httpRequest",
             "typeVersion": 4.1,
             "position": [
-                1300,
-                300
+                1550,
+                375
             ]
         }
     ],
     "connections": {
+        "Execute Workflow Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Transformer",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
         "Webhook": {
             "main": [
                 [
@@ -195,6 +251,24 @@
         },
         "Get Student": {
             "main": [
+                [
+                    {
+                        "node": "É Atendimento Humano?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "É Atendimento Humano?": {
+            "main": [
+                [
+                    {
+                        "node": "Human Stop",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
                 [
                     {
                         "node": "Buscar Memórias (RLHF)",
@@ -255,6 +329,9 @@
         }
     },
     "settings": {
-        "executionOrder": "v1"
+        "executionOrder": "v1",
+        "saveManualExecutions": true,
+        "saveDataErrorExecution": "all",
+        "saveExecutionProgress": true
     }
 }
