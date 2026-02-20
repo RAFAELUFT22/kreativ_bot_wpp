@@ -1,0 +1,151 @@
+{
+    "name": "Kreativ: RAG Ingestion Pipeline",
+    "active": true,
+    "nodes": [
+        {
+            "id": "trigger-webhook",
+            "name": "Webhook: Ingestão RAG",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2,
+            "position": [200, 300],
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "rag-ingest",
+                "responseMode": "responseNode",
+                "options": {}
+            },
+            "webhookId": "kreativ-rag-ingest"
+        },
+        {
+            "id": "validator",
+            "name": "Validar Payload",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [420, 300],
+            "parameters": {
+                "jsCode": "// Validar e normalizar payload\nconst body = ($json.body && typeof $json.body === 'object') ? $json.body : $json;\nconst content   = body.content || body.fileContent || body.text || '';\nconst fileName  = body.fileName || body.file_name || 'manual.txt';\nconst moduleId  = body.moduleId || body.module_id || null;\nconst courseId  = parseInt(body.courseIntId || body.course_int_id || 19, 10);\nconst moduleNum = parseInt(body.moduleNumber || body.module_number || 1, 10);\n\nif (!content || content.length < 20) {\n  throw new Error('Campo content obrigatorio (min 20 chars). Keys: ' + JSON.stringify(Object.keys(body)));\n}\n\nreturn [{ json: {\n  fileName, content, moduleId, courseIntId: courseId, moduleNumber: moduleNum,\n  contentLength: content.length\n} }];"
+            }
+        },
+        {
+            "id": "chunk-node",
+            "name": "Chunking de Texto",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [640, 300],
+            "parameters": {
+                "jsCode": "// Recebe: { fileName, content, moduleId, courseIntId, moduleNumber }\nconst fileName    = $json.fileName || 'documento.pdf';\nconst fileContent = $json.content || '';\nconst moduleId    = $json.moduleId || null;\nconst courseIntId = parseInt($json.courseIntId || 19, 10);\nconst moduleNum   = parseInt($json.moduleNumber || 1, 10);\n\n// Decodificar base64 se necessario\nlet rawText = fileContent;\nif (fileContent && !fileContent.includes(' ') && fileContent.length > 100) {\n  try { rawText = Buffer.from(fileContent, 'base64').toString('utf8'); }\n  catch(e) { rawText = fileContent; }\n}\n\n// Limpar texto\nrawText = rawText\n  .replace(/\\r\\n/g, '\\n')\n  .replace(/\\n{3,}/g, '\\n\\n')\n  .replace(/[^\\S\\n]+/g, ' ')\n  .trim();\n\nif (!rawText || rawText.length < 50) {\n  throw new Error('Conteudo muito curto ou vazio: ' + rawText.length + ' chars');\n}\n\n// Chunking: ~500 chars com overlap de 100\nconst CHUNK_SIZE = 500;\nconst OVERLAP    = 100;\nconst chunks = [];\nlet start = 0;\nlet chunkIndex = 0;\n\nwhile (start < rawText.length) {\n  let end = Math.min(start + CHUNK_SIZE, rawText.length);\n\n  if (end < rawText.length) {\n    const lastPara = rawText.lastIndexOf('\\n\\n', end);\n    const lastSent = rawText.lastIndexOf('. ', end);\n    if (lastPara > start + 200) end = lastPara + 2;\n    else if (lastSent > start + 200) end = lastSent + 2;\n  }\n\n  const chunkText = rawText.substring(start, end).trim();\n  if (chunkText.length > 30) {\n    chunks.push({\n      json: {\n        chunk_index: chunkIndex,\n        content: chunkText,\n        source_file: fileName,\n        module_id: moduleId,\n        course_int_id: courseIntId,\n        module_number: moduleNum,\n        char_count: chunkText.length\n      }\n    });\n    chunkIndex++;\n  }\n\n  // CRITICAL: break before update to prevent infinite loop on last chunk\n  if (end >= rawText.length) break;\n  start = end - OVERLAP;\n}\n\nif (chunks.length === 0) {\n  throw new Error('Nenhum chunk gerado. rawLength: ' + rawText.length);\n}\nreturn chunks;"
+            }
+        },
+        {
+            "id": "embed-node",
+            "name": "Gerar Embedding (DeepSeek)",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [860, 300],
+            "continueOnFail": true,
+            "parameters": {
+                "method": "POST",
+                "url": "https://api.deepseek.com/v1/embeddings",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer sk-412552782fbe4009a25a013825e6ab66"
+                        },
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ ({\"model\":\"deepseek-embedding\",\"input\":$json.content}) }}",
+                "options": {}
+            }
+        },
+        {
+            "id": "prep-node",
+            "name": "Preparar para PostgreSQL",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [1080, 300],
+            "parameters": {
+                "mode": "runOnceForEachItem",
+                "jsCode": "// Recupera dados do chunk (mesmo indice de item)\nconst chunk = $('Chunking de Texto').item.json;\n\n// Tenta extrair embedding da resposta DeepSeek (opcional)\nlet embeddingStr = null;\ntry {\n  if ($json.data && $json.data[0] && Array.isArray($json.data[0].embedding)) {\n    embeddingStr = '[' + $json.data[0].embedding.join(',') + ']';\n  }\n} catch(e) { embeddingStr = null; }\n\n// Escapar aspas simples para SQL seguro\nconst safeContent = (chunk.content || '').replace(/'/g, \"''\");\nconst safeFile    = (chunk.source_file || 'unknown').replace(/'/g, \"''\");\n\nreturn [{ json: {\n  source_file: safeFile,\n  chunk_index: chunk.chunk_index || 0,\n  content: safeContent,\n  course_int_id: chunk.course_int_id || 19,\n  module_number: chunk.module_number || 1,\n  embedding: embeddingStr\n} }];"
+            }
+        },
+        {
+            "id": "save-chunk",
+            "name": "Salvar Chunk no PostgreSQL",
+            "type": "n8n-nodes-base.postgres",
+            "typeVersion": 2.5,
+            "position": [1300, 300],
+            "continueOnFail": true,
+            "credentials": {
+                "postgres": {
+                    "id": "lJaeEy4CpHbhgMAp",
+                    "name": "Kreativ PostgreSQL"
+                }
+            },
+            "parameters": {
+                "operation": "executeQuery",
+                "query": "INSERT INTO document_chunks\n  (source_file, chunk_index, content, metadata, embedding)\nVALUES (\n  '{{ $json.source_file }}',\n  {{ $json.chunk_index }},\n  '{{ $json.content }}',\n  '{\"course_int_id\": {{ $json.course_int_id }}, \"module_number\": {{ $json.module_number }}, \"source\": \"{{ $json.source_file }}\"}'::jsonb,\n  NULL\n)\nRETURNING id, chunk_index;",
+                "options": {}
+            }
+        },
+        {
+            "id": "aggregate-node",
+            "name": "Agregar Resultados",
+            "type": "n8n-nodes-base.aggregate",
+            "typeVersion": 1,
+            "position": [1520, 300],
+            "parameters": {
+                "aggregate": "aggregateAllItemData",
+                "include": "allFields",
+                "destinationFieldName": "chunks",
+                "options": {}
+            }
+        },
+        {
+            "id": "respond-node",
+            "name": "Resposta Final",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1,
+            "position": [1740, 300],
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={{ ({success: true, chunksIngested: ($json.chunks || []).length, message: 'Chunks ingeridos com sucesso'}) }}"
+            }
+        }
+    ],
+    "connections": {
+        "Webhook: Ingestão RAG": {
+            "main": [[{"node": "Validar Payload", "type": "main", "index": 0}]]
+        },
+        "Validar Payload": {
+            "main": [[{"node": "Chunking de Texto", "type": "main", "index": 0}]]
+        },
+        "Chunking de Texto": {
+            "main": [[{"node": "Gerar Embedding (DeepSeek)", "type": "main", "index": 0}]]
+        },
+        "Gerar Embedding (DeepSeek)": {
+            "main": [[{"node": "Preparar para PostgreSQL", "type": "main", "index": 0}]]
+        },
+        "Preparar para PostgreSQL": {
+            "main": [[{"node": "Salvar Chunk no PostgreSQL", "type": "main", "index": 0}]]
+        },
+        "Salvar Chunk no PostgreSQL": {
+            "main": [[{"node": "Agregar Resultados", "type": "main", "index": 0}]]
+        },
+        "Agregar Resultados": {
+            "main": [[{"node": "Resposta Final", "type": "main", "index": 0}]]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1",
+        "saveManualExecutions": true,
+        "callerPolicy": "workflowsFromSameOwner"
+    }
+}
