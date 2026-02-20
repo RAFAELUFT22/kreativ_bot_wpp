@@ -11,7 +11,7 @@ O sistema opera como um ecossistema de microserviços orquestrados por eventos, 
 ```mermaid
 graph TD
     WA[WhatsApp] --> EVO[Evolution API]
-    EVO --> N8N_R[N8N: Router 01]
+    EVO --> N8N_R[N8N: Router 01]222
     N8N_R -->|Bot State| BB[BuilderBot]
     N8N_R -->|AI Query| AI[N8N: AI Router V3]
     AI --> DS[DeepSeek API]
@@ -24,7 +24,7 @@ graph TD
 
 ## 2. Estrutura de Pastas e Responsabilidades
 
-### 📂 `/apps` (Núcleo da Aplicação)
+### 📂 `/apps` (N/MO222úcleo da Aplicação)
 *   `builderbot/`: Gerencia a Máquina de Estados (FSM) do bot. Controla fluxos fixos como boas-vindas e menus.
 *   `evolution/`: Instância do gateway WhatsApp. Responsável pelo recebimento/envio de mensagens e mídias.
 *   `portal/` & `web/`: Frontends em Next.js (v14+) para o Portal do Aluno e landing pages.

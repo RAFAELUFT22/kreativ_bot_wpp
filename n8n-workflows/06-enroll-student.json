@@ -5,10 +5,7 @@
       "id": "en-wh",
       "name": "Webhook Cadastro",
       "type": "n8n-nodes-base.webhook",
-      "position": [
-        240,
-        304
-      ],
+      "position": [240, 304],
       "webhookId": "kreativ-enroll-student",
       "parameters": {
         "path": "enroll-student",
@@ -26,25 +23,19 @@
       "name": "Normalizar Dados",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        460,
-        304
-      ]
+      "position": [460, 304]
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO students (phone, name, course_id, current_module, attendance_status, email)\nVALUES ('{{ $json.phone }}', '{{ $json.name }}', '{{ $json.course_id }}', 1, 'bot', {{ $json.email ? \"'\" + $json.email + \"'\" : 'NULL' }})\nON CONFLICT (phone) DO UPDATE SET\n  name = COALESCE(EXCLUDED.name, students.name),\n  course_id = COALESCE(EXCLUDED.course_id, students.course_id),\n  updated_at = NOW()\nRETURNING id, phone, name, course_id, current_module",
+        "query": "INSERT INTO students (phone, name, course_id, current_module, attendance_status, email)\nVALUES ('{{ $json.phone }}', '{{ $json.name }}', '{{ $json.course_id }}', 1, 'bot', {{ $json.email ? \"'\" + $json.email + \"'\" : 'NULL' }})\nON CONFLICT (phone) DO UPDATE SET\n  name = COALESCE(EXCLUDED.name, students.name),\n  course_id = COALESCE(EXCLUDED.course_id, students.course_id),\n  updated_at = NOW()\nRETURNING id, phone, name, course_id, current_module, portal_token",
         "options": {}
       },
       "id": "en-db",
       "name": "Upsert Aluno DB",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
-      "position": [
-        680,
-        304
-      ],
+      "position": [680, 304],
       "credentials": {
         "postgres": {
           "id": "lJaeEy4CpHbhgMAp",
@@ -55,16 +46,13 @@
     },
     {
       "parameters": {
-        "jsCode": "\nconst student = $input.item.json;\nconst phone = student.phone;\n\n// Create contact in Chatwoot\nreturn [{ json: {\n  phone,\n  name: student.name,\n  chatwoot_payload: {\n    name: student.name,\n    phone_number: '+' + phone,\n    identifier: phone\n  }\n} }];\n"
+        "jsCode": "\nconst student = $input.item.json;\nconst normalizado = $('Normalizar Dados').item.json;\nconst phone = student.phone || normalizado.phone;\nconst name = student.name || normalizado.name;\nconst portalToken = student.portal_token || null;\nconst portalUrl = portalToken\n  ? 'https://portal.extensionista.site/aluno/' + portalToken\n  : null;\n\n// Preparar payload Chatwoot\nreturn [{ json: {\n  phone,\n  name,\n  portalUrl,\n  chatwoot_payload: {\n    name,\n    phone_number: '+' + phone,\n    identifier: phone\n  }\n} }];\n"
       },
       "id": "en-cw-prep",
       "name": "Preparar Contato Chatwoot",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        900,
-        304
-      ]
+      "position": [900, 304]
     },
     {
       "parameters": {
@@ -88,10 +76,7 @@
       "name": "Criar Contato Chatwoot",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        1120,
-        304
-      ],
+      "position": [1120, 304],
       "continueOnFail": true
     },
     {
@@ -109,17 +94,14 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  number: $('Normalizar Dados').item.json.phone,\n  text: \"Olá, \" + $('Normalizar Dados').item.json.name + \"! 👋\\n\\nVocê foi matriculado(a) no curso *IA no Dia a Dia* da Kreativ Educação! 🎓\\n\\nPara começar sua jornada de aprendizado, responda *MODULO* a qualquer momento.\\n\\nQualquer dúvida, estou aqui! 😊\"\n}) }}",
+        "jsonBody": "={{ JSON.stringify({\n  number: $('Preparar Contato Chatwoot').item.json.phone,\n  text: \"Olá, \" + $('Preparar Contato Chatwoot').item.json.name + \"! 👋\\n\\nVocê foi matriculado(a) no curso *IA no Dia a Dia* da Kreativ Educação! 🎓\\n\\n\" +\n    ($('Preparar Contato Chatwoot').item.json.portalUrl\n      ? \"📊 *Acesse seu painel pessoal:*\\n\" + $('Preparar Contato Chatwoot').item.json.portalUrl + \"\\n\\nLá você acompanha seu progresso, módulos e certificados.\\n\\n\"\n      : \"\") +\n    \"Para começar sua jornada, responda *OI* a qualquer momento.\\n\\nQualquer dúvida, estou aqui! 😊\"\n}) }}",
         "options": {}
       },
       "id": "en-msg",
       "name": "Enviar Boas-vindas WhatsApp",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        1340,
-        304
-      ],
+      "position": [1340, 304],
       "continueOnFail": true
     },
     {
@@ -131,78 +113,27 @@
       "name": "Responder Sucesso",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [
-        1560,
-        304
-      ]
+      "position": [1560, 304]
     }
   ],
   "connections": {
     "Webhook Cadastro": {
-      "main": [
-        [
-          {
-            "node": "Normalizar Dados",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{ "node": "Normalizar Dados", "type": "main", "index": 0 }]]
     },
     "Normalizar Dados": {
-      "main": [
-        [
-          {
-            "node": "Upsert Aluno DB",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{ "node": "Upsert Aluno DB", "type": "main", "index": 0 }]]
     },
     "Upsert Aluno DB": {
-      "main": [
-        [
-          {
-            "node": "Preparar Contato Chatwoot",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{ "node": "Preparar Contato Chatwoot", "type": "main", "index": 0 }]]
     },
     "Preparar Contato Chatwoot": {
-      "main": [
-        [
-          {
-            "node": "Criar Contato Chatwoot",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{ "node": "Criar Contato Chatwoot", "type": "main", "index": 0 }]]
     },
     "Criar Contato Chatwoot": {
-      "main": [
-        [
-          {
-            "node": "Enviar Boas-vindas WhatsApp",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{ "node": "Enviar Boas-vindas WhatsApp", "type": "main", "index": 0 }]]
     },
     "Enviar Boas-vindas WhatsApp": {
-      "main": [
-        [
-          {
-            "node": "Responder Sucesso",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{ "node": "Responder Sucesso", "type": "main", "index": 0 }]]
     }
   },
   "settings": {
