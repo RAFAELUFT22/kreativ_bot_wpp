@@ -28,3 +28,4 @@ read_docx.py
 *.docx
 pre_inscritons.jsonl
 instances.json
+.worktrees/
