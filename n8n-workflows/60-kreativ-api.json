@@ -1,0 +1,991 @@
+{
+  "name": "Kreativ: Unified API Router (v1)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "kreativ-unified-api",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Webhook API",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "kreativ-unified-api-id"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body || $json;\nconst phone = String(body.phone || '').replace(/\\D/g, '');\nconst action = body.action || 'check_student';\n\nreturn [{ json: { ...body, phone, action } }];"
+      },
+      "name": "Normalizar Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "check_student",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "request_human",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "get_module",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "get_progress",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "submit_quiz",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "ai_tutor",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "rag_ingest",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "emit_certificate",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        }
+      },
+      "name": "Roteador de Ações",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT s.id, s.name, s.phone, s.course_id, s.current_module,\n       s.completed_modules, s.portal_token, s.lead_score,\n       c.name as course_name,\n       (SELECT count(*)::int FROM modules WHERE course_int_id = s.course_id AND is_published = TRUE) as total_modules,\n       COALESCE(h.status, s.attendance_status) as status\nFROM students s\nLEFT JOIN courses c ON c.id = s.course_id\nLEFT JOIN handoff_control h ON h.phone = s.phone\nWHERE s.phone = '{{ $json.phone }}'\n   OR (length('{{ $json.phone }}') = 12\n       AND s.phone = concat(left('{{ $json.phone }}', 2), '9', right('{{ $json.phone }}', 10)))\nLIMIT 1",
+        "options": {}
+      },
+      "name": "Check: Buscar Aluno",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        800,
+        -200
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "lJaeEy4CpHbhgMAp",
+          "name": "Kreativ PostgreSQL"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all();\nconst input = $('Normalizar Input').first().json;\n\nif (!rows || rows.length === 0 || !rows[0].json.id) {\n  return [{ json: { status: 'unknown', phone: input.phone } }];\n}\n\nconst row = rows[0].json;\nconst status = row.status || 'bot';\n\nif (status === 'human') {\n  return [{ json: { status: 'human', phone: input.phone } }];\n}\n\nconst completed = Array.isArray(row.completed_modules) ? row.completed_modules.length : 0;\nconst total = row.total_modules || 1;\nconst pct = Math.round((completed / total) * 100);\nconst is_last_module = row.current_module >= total;\nconst course_completed = completed >= total;\n\nreturn [{ json: {\n  status: 'bot',\n  id: row.id,\n  name: row.name || 'Aluno',\n  first_name: (row.name || 'Aluno').split(' ')[0],\n  phone: row.phone,\n  course_id: row.course_id,\n  course_name: row.course_name,\n  current_module: row.current_module,\n  completed_modules: row.completed_modules || [],\n  total_modules: total,\n  progress_pct: pct,\n  is_last_module,\n  course_completed,\n  portal_token: row.portal_token,\n  lead_score: row.lead_score || 0\n} }];"
+      },
+      "name": "Check: Formatar Resposta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1020,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO handoff_control (phone, status, last_handoff)\nVALUES ('{{ $json.phone }}', 'human', NOW())\nON CONFLICT (phone) DO UPDATE SET status = 'human', last_handoff = NOW();\n\nUPDATE students SET attendance_status = 'human', updated_at = NOW()\nWHERE phone = '{{ $json.phone }}';\n\nINSERT INTO support_sessions (student_id, reason)\nSELECT id, '{{ ($json.reason || \"Solicitação via Typebot\") | replace(\"'\", \"''\") }}'\nFROM students\nWHERE phone = '{{ $json.phone }}'\nLIMIT 1;",
+        "options": {}
+      },
+      "name": "Human: Atualizar DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        800,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "lJaeEy4CpHbhgMAp",
+          "name": "Kreativ PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://kreativ_n8n:5678/webhook/request-human-support",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "name": "Human: Chatwoot Flow",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1020,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://kreativ_evolution:8080/typebot/changeStatus/europs",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "EXr5OuEE2sBMbRo94LtWQfofvEF1gHUM"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  remoteJid: $json.phone + \"@s.whatsapp.net\",\n  status: \"paused\"\n}) }}",
+        "options": {}
+      },
+      "name": "Human: Pausar Typebot",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { success: true, message: 'Tutor solicitado e bot pausado' } }];"
+      },
+      "name": "Human: Finalizar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1460,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT m.id, m.module_number, m.title, m.description, m.content_text,\n       m.quiz_questions, m.passing_score, m.media_urls,\n       (SELECT count(*)::int FROM modules\n        WHERE course_int_id = s.course_id\n          AND is_published = TRUE) as total_modules\nFROM students s\nJOIN modules m ON m.course_int_id = s.course_id\n  AND m.module_number = {{ $json.module_number || 1 }}\n  AND m.is_published = TRUE\nWHERE s.phone = '{{ $json.phone }}'\nLIMIT 1",
+        "options": {}
+      },
+      "name": "Module: Buscar Dados",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        800,
+        200
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "lJaeEy4CpHbhgMAp",
+          "name": "Kreativ PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const row = $json;\nif (!row.id) return [{ json: { error: 'Módulo não encontrado', skip_ai: true } }];\n\nconst systemPrompt = `Você é um instrutor da Kreativ Educação.\\nBaseado no CONTEÚDO DO MÓDULO abaixo, gere 3 perguntas discursivas para avaliar o conhecimento do aluno.\\n\\nRegras:\\n1. Retorne APENAS um JSON no formato: [{\"question\": \"pergunta 1\"}, {\"question\": \"pergunta 2\"}, {\"question\": \"pergunta 3\"}]\\n2. Perguntas devem ser curtas e diretas em português.\\n3. NÃO adicione texto explicativo fora do JSON.`;\n\nconst userMsg = `MÓDULO: ${row.title}\\nCONTEÚDO: ${row.content_text}`;\n\nreturn [{ json: {\n  ...row,\n  skip_ai: false,\n  dsModel: 'deepseek-chat',\n  dsMessages: [\n    { role: 'system', content: systemPrompt },\n    { role: 'user', content: userMsg }\n  ]\n} }];"
+      },
+      "name": "Module: Prompt AI Quiz",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1020,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.deepseek.com/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer sk-412552782fbe4009a25a013825e6ab66"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { model: $json.dsModel, messages: $json.dsMessages, temperature: 0.5, response_format: { type: 'json_object' } } }}",
+        "options": {}
+      },
+      "name": "Module: DeepSeek Generate Quiz",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1240,
+        200
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const row = $('Module: Prompt AI Quiz').first().json;\nconst aiRaw = $json;\n\nlet quiz_questions = [];\ntry {\n  const content = aiRaw.choices[0].message.content;\n  const parsed = JSON.parse(content);\n  quiz_questions = Array.isArray(parsed) ? parsed : (parsed.questions || []);\n} catch (e) {\n  quiz_questions = [\n    { question: 'O que você aprendeu de mais importante neste módulo?' },\n    { question: 'Como você aplicaria este conhecimento na prática?' },\n    { question: 'Quais dúvidas ainda restam sobre o conteúdo?' }\n  ];\n}\n\nconst contentStr = row.content_text || '';\n\nreturn [{ json: {\n  module_number: row.module_number,\n  title: row.title,\n  description: row.description,\n  content_text: contentStr,\n  passing_score: row.passing_score || 70,\n  total_modules: row.total_modules || 1,\n  quiz_questions,\n  total_questions: quiz_questions.length,\n  question_1: (quiz_questions[0] || {}).question || '',\n  question_2: (quiz_questions[1] || {}).question || '',\n  question_3: (quiz_questions[2] || {}).question || ''\n} }];"
+      },
+      "name": "Module: Finalizar Dados",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1460,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT s.name, s.phone, s.current_module, s.completed_modules,\n       s.portal_token, c.name as course_name,\n       (SELECT count(*)::int FROM modules WHERE course_int_id = s.course_id AND is_published = TRUE) as total_modules,\n       to_char(s.created_at, 'DD/MM/YYYY') as enrolled_at\nFROM students s\nLEFT JOIN courses c ON c.id = s.course_id\nWHERE s.phone = '{{ $json.phone }}'\nLIMIT 1",
+        "options": {}
+      },
+      "name": "Progress: Buscar DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        800,
+        400
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "lJaeEy4CpHbhgMAp",
+          "name": "Kreativ PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const row = $json;\nif (!row.name) return [{ json: { error: 'Aluno não encontrado' } }];\n\nconst completed = Array.isArray(row.completed_modules) ? row.completed_modules.length : 0;\nconst total = row.total_modules || 1;\nconst pct = Math.round((completed / total) * 100);\n\nreturn [{ json: {\n  ...row,\n  completed_modules: completed,\n  completion_pct: pct\n} }];"
+      },
+      "name": "Progress: Calcular",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1020,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://kreativ_n8n:5678/webhook/ai-tutor-v3",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { phone: $json.phone, body: $json.message || $json.body || 'Oi' } }}",
+        "options": {}
+      },
+      "name": "AI Tutor: Proxy Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        800,
+        800
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.fileUrl }}",
+        "encoding": "arrayBuffer",
+        "options": {}
+      },
+      "name": "RAG: Download PDF",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        800,
+        1000
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "name": "RAG: Extrair Texto",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        1020,
+        1000
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://kreativ_n8n:5678/webhook/rag-ingest",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { content: $json.text, fileName: \"upload_via_bot.pdf\", course_int_id: $('Normalizar Input').first().json.course_id || 19 } }}",
+        "options": {}
+      },
+      "name": "RAG: Ingerir no DB",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1240,
+        1000
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { success: true, message: 'PDF processado e ingerido com sucesso no banco de conhecimento.' } }];"
+      },
+      "name": "Finalizar Ação",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1460,
+        800
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}"
+      },
+      "name": "Responder Typebot",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1800,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT m.module_number, m.title, m.content_text, m.passing_score,\n       (SELECT count(*)::int FROM modules WHERE course_int_id = s.course_id AND is_published = TRUE) as total_modules\nFROM students s\nJOIN modules m ON m.course_int_id = s.course_id AND m.module_number = {{ $json.module_number || 1 }}\nWHERE s.phone = '{{ $json.phone }}'\nLIMIT 1",
+        "options": {}
+      },
+      "name": "Quiz: Buscar Contexto",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        800,
+        600
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "lJaeEy4CpHbhgMAp",
+          "name": "Kreativ PostgreSQL"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $('Normalizar Input').first().json;\nconst ctx = $json;\n\nconst sysPrompt = `Você é um avaliador pedagógico da Kreativ Educação.\nAvalie as respostas do aluno ao módulo \"${ctx.title}\".\n\nCritérios:\n- Analise a compreensão dos conceitos\n- Atribua score de 0 a 100\n- Feedback construtivo em português (máximo 3 frases)\n- Se o aluno não soube responder, incentive a revisão\n\nRetorne APENAS JSON: {\"score\": número, \"feedback\": \"texto\"}`;\n\nconst userMsg = [\n  `P1: ${input.question_1}\\nR1: ${input.answer_1 || '(sem resposta)'}`,\n  `P2: ${input.question_2}\\nR2: ${input.answer_2 || '(sem resposta)'}`,\n  `P3: ${input.question_3}\\nR3: ${input.answer_3 || '(sem resposta)'}`\n].join('\\n\\n');\n\nreturn [{ json: {\n  ...ctx,\n  input,\n  dsMessages: [\n    { role: 'system', content: sysPrompt },\n    { role: 'user', content: userMsg }\n  ]\n} }];"
+      },
+      "name": "Quiz: Prompt Avaliar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1020,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.deepseek.com/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer sk-412552782fbe4009a25a013825e6ab66"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { model: 'deepseek-chat', messages: $json.dsMessages, temperature: 0.3, response_format: { type: 'json_object' } } }}",
+        "options": {}
+      },
+      "name": "Quiz: DeepSeek Avaliar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1240,
+        600
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const ctx = $('Quiz: Prompt Avaliar').first().json;\nconst aiRaw = $json;\n\nlet score = 50, feedback = 'Suas respostas foram recebidas! Continue revisando o conteúdo.';\ntry {\n  const content = aiRaw.choices[0].message.content;\n  const parsed = JSON.parse(content.replace(/```json|```/g, '').trim());\n  score = parsed.score || 50;\n  feedback = parsed.feedback || feedback;\n} catch (e) { /* fallback */ }\n\nconst passing_score = ctx.passing_score || 70;\nconst passed = score >= passing_score;\nconst module_number = parseInt(ctx.input.module_number || 1);\nconst total_modules = ctx.total_modules || 1;\nconst is_last_module = module_number >= total_modules;\nconst next_module = is_last_module ? null : module_number + 1;\n\nreturn [{ json: {\n  phone: ctx.input.phone,\n  module_number,\n  score,\n  feedback,\n  passed,\n  passing_score,\n  module_complete: passed,\n  is_last_module,\n  next_module,\n  total_modules\n} }];"
+      },
+      "name": "Quiz: Processar Resultado",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1460,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE students SET\n  scores = COALESCE(scores, '{}') || jsonb_build_object('module_{{ $json.module_number }}', {{ $json.score }}::int),\n  completed_modules = CASE\n    WHEN '{{ $json.passed }}'='true' AND NOT ({{ $json.module_number }}::int = ANY(COALESCE(completed_modules, '{}'::int[])))\n    THEN array_append(COALESCE(completed_modules, '{}'::int[]), {{ $json.module_number }}::int)\n    ELSE COALESCE(completed_modules, '{}'::int[])\n  END,\n  current_module = CASE\n    WHEN '{{ $json.passed }}'='true' AND '{{ $json.is_last_module }}'='false'\n    THEN {{ $json.next_module || $json.module_number }}::int\n    ELSE current_module\n  END,\n  updated_at = NOW()\nWHERE phone = '{{ $json.phone }}'",
+        "options": {}
+      },
+      "name": "Quiz: Atualizar Progresso",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1680,
+        600
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "lJaeEy4CpHbhgMAp",
+          "name": "Kreativ PostgreSQL"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO certificates (student_id, course_id, module_number, module_name, verification_code)\nSELECT s.id, s.course_id::text, {{ $json.module_number || 1 }}::int,\n       m.title, encode(gen_random_bytes(12), 'hex')\nFROM students s\nJOIN modules m ON m.course_int_id = s.course_id AND m.module_number = {{ $json.module_number || 1 }}\nWHERE s.phone = '{{ $json.phone }}'\nON CONFLICT DO NOTHING\nRETURNING id::text, verification_code, module_name",
+        "options": {}
+      },
+      "name": "Cert: Inserir DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        800,
+        800
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "lJaeEy4CpHbhgMAp",
+          "name": "Kreativ PostgreSQL"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all();\nconst input = $('Normalizar Input').first().json;\nif (!rows || !rows[0]?.json?.id) {\n  // Query the existing cert\n  return [{ json: { error: 'Certificado não encontrado ou já emitido', success: false } }];\n}\nconst cert = rows[0].json;\nconst certUrl = `https://portal.extensionista.site/certificado/${cert.verification_code}`;\nreturn [{ json: {\n  success: true,\n  cert_id: cert.id,\n  cert_url: certUrl,\n  verification_code: cert.verification_code,\n  module_name: cert.module_name\n} }];"
+      },
+      "name": "Cert: Formatar URL",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1020,
+        800
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook API": {
+      "main": [
+        [
+          {
+            "node": "Normalizar Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar Input": {
+      "main": [
+        [
+          {
+            "node": "Roteador de Ações",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Roteador de Ações": {
+      "main": [
+        [
+          {
+            "node": "Check: Buscar Aluno",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Human: Atualizar DB",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Module: Buscar Dados",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Progress: Buscar DB",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Quiz: Buscar Contexto",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Tutor: Proxy Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "RAG: Download PDF",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Cert: Inserir DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check: Buscar Aluno": {
+      "main": [
+        [
+          {
+            "node": "Check: Formatar Resposta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check: Formatar Resposta": {
+      "main": [
+        [
+          {
+            "node": "Responder Typebot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Human: Atualizar DB": {
+      "main": [
+        [
+          {
+            "node": "Human: Chatwoot Flow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Human: Chatwoot Flow": {
+      "main": [
+        [
+          {
+            "node": "Human: Pausar Typebot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Human: Pausar Typebot": {
+      "main": [
+        [
+          {
+            "node": "Human: Finalizar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Human: Finalizar": {
+      "main": [
+        [
+          {
+            "node": "Finalizar Ação",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Module: Buscar Dados": {
+      "main": [
+        [
+          {
+            "node": "Module: Prompt AI Quiz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Module: Prompt AI Quiz": {
+      "main": [
+        [
+          {
+            "node": "Module: DeepSeek Generate Quiz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Module: DeepSeek Generate Quiz": {
+      "main": [
+        [
+          {
+            "node": "Module: Finalizar Dados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Module: Finalizar Dados": {
+      "main": [
+        [
+          {
+            "node": "Responder Typebot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Progress: Buscar DB": {
+      "main": [
+        [
+          {
+            "node": "Progress: Calcular",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Progress: Calcular": {
+      "main": [
+        [
+          {
+            "node": "Responder Typebot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Tutor: Proxy Request": {
+      "main": [
+        [
+          {
+            "node": "Finalizar Ação",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RAG: Download PDF": {
+      "main": [
+        [
+          {
+            "node": "RAG: Extrair Texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RAG: Extrair Texto": {
+      "main": [
+        [
+          {
+            "node": "RAG: Ingerir no DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RAG: Ingerir no DB": {
+      "main": [
+        [
+          {
+            "node": "Finalizar Ação",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Finalizar Ação": {
+      "main": [
+        [
+          {
+            "node": "Responder Typebot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quiz: Buscar Contexto": {
+      "main": [
+        [
+          {
+            "node": "Quiz: Prompt Avaliar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quiz: Prompt Avaliar": {
+      "main": [
+        [
+          {
+            "node": "Quiz: DeepSeek Avaliar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quiz: DeepSeek Avaliar": {
+      "main": [
+        [
+          {
+            "node": "Quiz: Processar Resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quiz: Processar Resultado": {
+      "main": [
+        [
+          {
+            "node": "Quiz: Atualizar Progresso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quiz: Atualizar Progresso": {
+      "main": [
+        [
+          {
+            "node": "Responder Typebot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cert: Inserir DB": {
+      "main": [
+        [
+          {
+            "node": "Cert: Formatar URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cert: Formatar URL": {
+      "main": [
+        [
+          {
+            "node": "Responder Typebot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

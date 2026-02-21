@@ -30,7 +30,8 @@ docker compose up -d typebot-builder typebot-viewer
 ## Bloco 3 — Construir o Bot no Typebot UI
 
 **Acessar:** https://typebot.extensionista.site
-**Login:** rafael.luciano@mail.uft.edu.br
+**Login:** rafaloct@gmail.com ou 
+**API_TYPE_BOT** LqkFiNhRjg1p2W3nNkgLpxPM
 
 ### Criar o bot
 1. New typebot → "Kreativ Educacao" → slug: `kreativ-educacao`
