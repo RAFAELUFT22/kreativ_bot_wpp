@@ -42,7 +42,7 @@ def wb(bid, action, extra_body, mappings, out_eid=None):
     """HTTP Request (webhook) to N8N unified API.
     mappings = {"variable_name": "json.path.in.response", ...}
     """
-    body = {"action": action, "phone": "{{phone}}", **extra_body}
+    body = {"action": action, "phone": "{{remoteJid}}", **extra_body}
     b = {"id": bid, "type": "webhook",
          "options": {
              "webhook": {"method": "POST", "url": N8N_URL,
@@ -90,6 +90,7 @@ def group(gid, title, x, y, blocks):
 
 V = {
     "phone":            "v_phone",
+    "remoteJid":        "v_remoteJid",   # pre-filled by Evolution API
     "student_status":   "v_status",
     "student_name":     "v_name",
     "current_module":   "v_cur_mod",
