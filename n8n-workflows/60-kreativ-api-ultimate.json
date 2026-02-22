@@ -1,5 +1,5 @@
 {
-    "updatedAt": "2026-02-22T03:49:16.156Z",
+    "updatedAt": "2026-02-22T04:16:51.894Z",
     "createdAt": "2026-02-21T21:18:29.584Z",
     "id": "SoB5evP9aOmj6hLA",
     "name": "Kreativ: Unified API Router (v1.1 - ULTIMATE)",
@@ -472,7 +472,9 @@
                 "sendBody": true,
                 "specifyBody": "json",
                 "jsonBody": "={{ { model: $json.dsModel, messages: $json.dsMessages, temperature: 0.5, response_format: { type: 'json_object' } } }}",
-                "options": {}
+                "options": {
+                    "timeout": 120000
+                }
             },
             "name": "Module: DeepSeek Generate Quiz",
             "type": "n8n-nodes-base.httpRequest",
@@ -534,16 +536,26 @@
         },
         {
             "parameters": {
-                "method": "POST",
-                "url": "http://kreativ_n8n:5678/webhook/ai-tutor-v3",
-                "sendBody": true,
-                "specifyBody": "json",
-                "jsonBody": "={{ { phone: $json.phone, body: $json.message || $json.body || 'Oi' } }}",
-                "options": {}
+                "workflowId": "5caL67H387euTxan",
+                "options": {
+                    "waitForSubWorkflow": true
+                },
+                "fields": {
+                    "values": [
+                        {
+                            "name": "phone",
+                            "stringValue": "={{ $json.phone }}"
+                        },
+                        {
+                            "name": "body",
+                            "stringValue": "={{ $json.message || $json.body || 'Oi' }}"
+                        }
+                    ]
+                }
             },
             "name": "AI Tutor: Proxy Request",
-            "type": "n8n-nodes-base.httpRequest",
-            "typeVersion": 4.2,
+            "type": "n8n-nodes-base.executeWorkflow",
+            "typeVersion": 1,
             "position": [
                 800,
                 800
@@ -680,7 +692,9 @@
                 "sendBody": true,
                 "specifyBody": "json",
                 "jsonBody": "={{ { model: 'deepseek-chat', messages: $json.dsMessages, temperature: 0.3, response_format: { type: 'json_object' } } }}",
-                "options": {}
+                "options": {
+                    "timeout": 120000
+                }
             },
             "name": "Quiz: DeepSeek Avaliar",
             "type": "n8n-nodes-base.httpRequest",
@@ -1682,9 +1696,9 @@
     "staticData": null,
     "meta": null,
     "pinData": {},
-    "versionId": "6aaf4455-8558-46c9-87f2-5e19afcd2d7d",
-    "activeVersionId": "6aaf4455-8558-46c9-87f2-5e19afcd2d7d",
-    "versionCounter": 32,
+    "versionId": "fdbc1395-74fc-4c22-b223-ef4eedb0b509",
+    "activeVersionId": "fdbc1395-74fc-4c22-b223-ef4eedb0b509",
+    "versionCounter": 38,
     "triggerCount": 1,
     "shared": [
         {
@@ -1707,9 +1721,9 @@
     ],
     "tags": [],
     "activeVersion": {
-        "updatedAt": "2026-02-22T03:49:16.162Z",
-        "createdAt": "2026-02-22T03:49:16.162Z",
-        "versionId": "6aaf4455-8558-46c9-87f2-5e19afcd2d7d",
+        "updatedAt": "2026-02-22T04:16:51.900Z",
+        "createdAt": "2026-02-22T04:16:51.900Z",
+        "versionId": "fdbc1395-74fc-4c22-b223-ef4eedb0b509",
         "workflowId": "SoB5evP9aOmj6hLA",
         "nodes": [
             {
@@ -2177,7 +2191,9 @@
                     "sendBody": true,
                     "specifyBody": "json",
                     "jsonBody": "={{ { model: $json.dsModel, messages: $json.dsMessages, temperature: 0.5, response_format: { type: 'json_object' } } }}",
-                    "options": {}
+                    "options": {
+                        "timeout": 120000
+                    }
                 },
                 "name": "Module: DeepSeek Generate Quiz",
                 "type": "n8n-nodes-base.httpRequest",
@@ -2239,16 +2255,26 @@
             },
             {
                 "parameters": {
-                    "method": "POST",
-                    "url": "http://kreativ_n8n:5678/webhook/ai-tutor-v3",
-                    "sendBody": true,
-                    "specifyBody": "json",
-                    "jsonBody": "={{ { phone: $json.phone, body: $json.message || $json.body || 'Oi' } }}",
-                    "options": {}
+                    "workflowId": "5caL67H387euTxan",
+                    "options": {
+                        "waitForSubWorkflow": true
+                    },
+                    "fields": {
+                        "values": [
+                            {
+                                "name": "phone",
+                                "stringValue": "={{ $json.phone }}"
+                            },
+                            {
+                                "name": "body",
+                                "stringValue": "={{ $json.message || $json.body || 'Oi' }}"
+                            }
+                        ]
+                    }
                 },
                 "name": "AI Tutor: Proxy Request",
-                "type": "n8n-nodes-base.httpRequest",
-                "typeVersion": 4.2,
+                "type": "n8n-nodes-base.executeWorkflow",
+                "typeVersion": 1,
                 "position": [
                     800,
                     800
@@ -2385,7 +2411,9 @@
                     "sendBody": true,
                     "specifyBody": "json",
                     "jsonBody": "={{ { model: 'deepseek-chat', messages: $json.dsMessages, temperature: 0.3, response_format: { type: 'json_object' } } }}",
-                    "options": {}
+                    "options": {
+                        "timeout": 120000
+                    }
                 },
                 "name": "Quiz: DeepSeek Avaliar",
                 "type": "n8n-nodes-base.httpRequest",
@@ -3385,18 +3413,18 @@
         "autosaved": false,
         "workflowPublishHistory": [
             {
-                "createdAt": "2026-02-22T03:49:16.338Z",
-                "id": 1546,
+                "createdAt": "2026-02-22T04:16:52.080Z",
+                "id": 1574,
                 "workflowId": "SoB5evP9aOmj6hLA",
-                "versionId": "6aaf4455-8558-46c9-87f2-5e19afcd2d7d",
+                "versionId": "fdbc1395-74fc-4c22-b223-ef4eedb0b509",
                 "event": "deactivated",
                 "userId": "d7e6ecc8-7259-4124-87c7-29a5f2d233ba"
             },
             {
-                "createdAt": "2026-02-22T03:49:16.407Z",
-                "id": 1547,
+                "createdAt": "2026-02-22T04:16:52.149Z",
+                "id": 1575,
                 "workflowId": "SoB5evP9aOmj6hLA",
-                "versionId": "6aaf4455-8558-46c9-87f2-5e19afcd2d7d",
+                "versionId": "fdbc1395-74fc-4c22-b223-ef4eedb0b509",
                 "event": "activated",
                 "userId": "d7e6ecc8-7259-4124-87c7-29a5f2d233ba"
             }

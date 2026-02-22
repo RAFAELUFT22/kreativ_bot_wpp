@@ -1,0 +1,434 @@
+{
+    "updatedAt": "2026-02-22T04:16:52.486Z",
+    "createdAt": "2026-02-19T17:35:21.211Z",
+    "id": "a0RywHWeY5kfgzGT",
+    "name": "Kreativ: AI Adaptive Router",
+    "description": null,
+    "active": true,
+    "isArchived": false,
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "ai-tutor-v2",
+                "responseMode": "onReceived",
+                "options": {}
+            },
+            "id": "webhook-final",
+            "name": "Webhook",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2,
+            "position": [
+                200,
+                300
+            ],
+            "webhookId": "kreativ-ai-tutor-v30"
+        },
+        {
+            "parameters": {
+                "jsCode": "// Normaliza\u00e7\u00e3o de payload \u2014 suporta Evolution API raw E chamadas estruturadas\nconst rawBody = $json.body || $json;\n\n// === Caminho 1: Chamada estruturada direta ({phone, body/message}) ===\nif (rawBody.phone && (rawBody.body || rawBody.message) && !rawBody.data) {\n  return [{\n    json: {\n      phone: String(rawBody.phone).replace(/\\D/g, ''),\n      body: rawBody.body || rawBody.message || 'Oi',\n      timestamp: new Date().toISOString(),\n      source: 'direct'\n    }\n  }];\n}\n\n// === Caminho 2: Payload bruto da Evolution API ===\nconst event = rawBody.event || '';\nif (event && event !== 'messages.upsert') return []; // ignorar outros eventos\n\nconst data = rawBody.data || {};\nconst msg = data.message || {};\nconst remoteJid = data.key?.remoteJid || rawBody.data?.key?.remoteJid || '';\nconst phone = remoteJid.split('@')[0].replace(/\\D/g, '');\nconst pushName = data.pushName || rawBody.pushName || 'Aluno';\n\n// Extrair texto de todos os tipos de mensagem conhecidos\nconst text =\n  // Texto simples\n  msg.conversation ||\n  // Texto estendido (links, formata\u00e7\u00e3o)\n  msg.extendedTextMessage?.text ||\n  // Resposta de lista WhatsApp (list_reply)\n  msg.listResponseMessage?.singleSelectReply?.selectedRowId ||\n  msg.listResponseMessage?.title ||\n  // Resposta de bot\u00e3o interativo\n  msg.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson ||\n  msg.buttonsResponseMessage?.selectedButtonId ||\n  msg.buttonsResponseMessage?.selectedDisplayText ||\n  // Template button reply\n  msg.templateButtonReplyMessage?.selectedId ||\n  // Fallback\n  '';\n\nif (!phone || !text) return [];\n\nreturn [{\n  json: {\n    phone,\n    body: text,\n    pushName,\n    timestamp: new Date().toISOString(),\n    source: 'evolution_api',\n    messageType: Object.keys(msg)[0] || 'unknown'\n  }\n}];"
+            },
+            "id": "transformer",
+            "name": "Transformer",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                400,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "executeQuery",
+                "query": "={{ \"SELECT name, course_id, current_module, syllabus_config FROM students WHERE phone = '\" + $json.phone + \"' LIMIT 1\" }}",
+                "options": {
+                    "alwaysOutputData": true
+                }
+            },
+            "id": "get-student-v30",
+            "name": "Get Student",
+            "type": "n8n-nodes-base.postgres",
+            "typeVersion": 2.6,
+            "position": [
+                600,
+                300
+            ],
+            "credentials": {
+                "postgres": {
+                    "id": "lJaeEy4CpHbhgMAp",
+                    "name": "Kreativ PostgreSQL"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "operation": "executeQuery",
+                "query": "={{ \"SELECT title, content_text as syllabus FROM modules m JOIN courses c ON m.course_id = c.slug WHERE c.id = \" + ($json.course_id || 19) + \" AND m.module_number = \" + ($json.current_module || 1) + \" LIMIT 1\" }}",
+                "options": {
+                    "alwaysOutputData": true
+                }
+            },
+            "id": "get-module-v30",
+            "name": "Get Module",
+            "type": "n8n-nodes-base.postgres",
+            "typeVersion": 2.6,
+            "position": [
+                800,
+                300
+            ],
+            "credentials": {
+                "postgres": {
+                    "id": "lJaeEy4CpHbhgMAp",
+                    "name": "Kreativ PostgreSQL"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://openrouter.ai/api/v1/chat/completions",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer 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"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({\n  model: 'deepseek/deepseek-chat',\n  messages: [\n    {\n      role: 'system',\n      content: `ALUNO: ${$node[\"Get Student\"].json.name}\\nEMENTA: ${$node[\"Get Module\"].json.syllabus}\\n\\nD\u00ea a aula amig\u00e1vel.` \n    },\n    { role: 'user', content: $node[\"Transformer\"].json.body }\n  ]\n}) }}",
+                "options": {
+                    "timeout": 120000
+                }
+            },
+            "id": "openrouter-v30",
+            "name": "AI Generator",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.1,
+            "position": [
+                1000,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://kreativ_builderbot:3008/api/send",
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ phone: $node[\"Transformer\"].json.phone, message: $json.choices[0].message.content }) }}"
+            },
+            "id": "send-wa-v30",
+            "name": "Send WhatsApp",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.1,
+            "position": [
+                1200,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "Transformer",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Transformer": {
+            "main": [
+                [
+                    {
+                        "node": "Get Student",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Get Student": {
+            "main": [
+                [
+                    {
+                        "node": "Get Module",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Get Module": {
+            "main": [
+                [
+                    {
+                        "node": "AI Generator",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "AI Generator": {
+            "main": [
+                [
+                    {
+                        "node": "Send WhatsApp",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1",
+        "saveDataSuccessExecution": "all",
+        "saveExecutionProgress": true,
+        "errorWorkflow": "mFwiM2dZyKeEgKk6",
+        "callerPolicy": "workflowsFromSameOwner",
+        "availableInMCP": false
+    },
+    "staticData": null,
+    "meta": null,
+    "pinData": null,
+    "versionId": "678f1f19-5204-4af4-ac18-1c7f09ca6368",
+    "activeVersionId": "678f1f19-5204-4af4-ac18-1c7f09ca6368",
+    "versionCounter": 109,
+    "triggerCount": 1,
+    "shared": [
+        {
+            "updatedAt": "2026-02-19T17:35:21.211Z",
+            "createdAt": "2026-02-19T17:35:21.211Z",
+            "role": "workflow:owner",
+            "workflowId": "a0RywHWeY5kfgzGT",
+            "projectId": "q7Bjn5D4LxM4OjYW",
+            "project": {
+                "updatedAt": "2026-02-17T20:41:01.829Z",
+                "createdAt": "2026-02-17T20:32:16.109Z",
+                "id": "q7Bjn5D4LxM4OjYW",
+                "name": "Rafael da Silva <rafael.luciano@mail.uft.edu.br>",
+                "type": "personal",
+                "icon": null,
+                "description": null,
+                "creatorId": "d7e6ecc8-7259-4124-87c7-29a5f2d233ba"
+            }
+        }
+    ],
+    "tags": [],
+    "activeVersion": {
+        "updatedAt": "2026-02-22T04:16:52.487Z",
+        "createdAt": "2026-02-22T04:16:52.487Z",
+        "versionId": "678f1f19-5204-4af4-ac18-1c7f09ca6368",
+        "workflowId": "a0RywHWeY5kfgzGT",
+        "nodes": [
+            {
+                "parameters": {
+                    "httpMethod": "POST",
+                    "path": "ai-tutor-v2",
+                    "responseMode": "onReceived",
+                    "options": {}
+                },
+                "id": "webhook-final",
+                "name": "Webhook",
+                "type": "n8n-nodes-base.webhook",
+                "typeVersion": 2,
+                "position": [
+                    200,
+                    300
+                ],
+                "webhookId": "kreativ-ai-tutor-v30"
+            },
+            {
+                "parameters": {
+                    "jsCode": "// Normaliza\u00e7\u00e3o de payload \u2014 suporta Evolution API raw E chamadas estruturadas\nconst rawBody = $json.body || $json;\n\n// === Caminho 1: Chamada estruturada direta ({phone, body/message}) ===\nif (rawBody.phone && (rawBody.body || rawBody.message) && !rawBody.data) {\n  return [{\n    json: {\n      phone: String(rawBody.phone).replace(/\\D/g, ''),\n      body: rawBody.body || rawBody.message || 'Oi',\n      timestamp: new Date().toISOString(),\n      source: 'direct'\n    }\n  }];\n}\n\n// === Caminho 2: Payload bruto da Evolution API ===\nconst event = rawBody.event || '';\nif (event && event !== 'messages.upsert') return []; // ignorar outros eventos\n\nconst data = rawBody.data || {};\nconst msg = data.message || {};\nconst remoteJid = data.key?.remoteJid || rawBody.data?.key?.remoteJid || '';\nconst phone = remoteJid.split('@')[0].replace(/\\D/g, '');\nconst pushName = data.pushName || rawBody.pushName || 'Aluno';\n\n// Extrair texto de todos os tipos de mensagem conhecidos\nconst text =\n  // Texto simples\n  msg.conversation ||\n  // Texto estendido (links, formata\u00e7\u00e3o)\n  msg.extendedTextMessage?.text ||\n  // Resposta de lista WhatsApp (list_reply)\n  msg.listResponseMessage?.singleSelectReply?.selectedRowId ||\n  msg.listResponseMessage?.title ||\n  // Resposta de bot\u00e3o interativo\n  msg.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson ||\n  msg.buttonsResponseMessage?.selectedButtonId ||\n  msg.buttonsResponseMessage?.selectedDisplayText ||\n  // Template button reply\n  msg.templateButtonReplyMessage?.selectedId ||\n  // Fallback\n  '';\n\nif (!phone || !text) return [];\n\nreturn [{\n  json: {\n    phone,\n    body: text,\n    pushName,\n    timestamp: new Date().toISOString(),\n    source: 'evolution_api',\n    messageType: Object.keys(msg)[0] || 'unknown'\n  }\n}];"
+                },
+                "id": "transformer",
+                "name": "Transformer",
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    400,
+                    300
+                ]
+            },
+            {
+                "parameters": {
+                    "operation": "executeQuery",
+                    "query": "={{ \"SELECT name, course_id, current_module, syllabus_config FROM students WHERE phone = '\" + $json.phone + \"' LIMIT 1\" }}",
+                    "options": {
+                        "alwaysOutputData": true
+                    }
+                },
+                "id": "get-student-v30",
+                "name": "Get Student",
+                "type": "n8n-nodes-base.postgres",
+                "typeVersion": 2.6,
+                "position": [
+                    600,
+                    300
+                ],
+                "credentials": {
+                    "postgres": {
+                        "id": "lJaeEy4CpHbhgMAp",
+                        "name": "Kreativ PostgreSQL"
+                    }
+                }
+            },
+            {
+                "parameters": {
+                    "operation": "executeQuery",
+                    "query": "={{ \"SELECT title, content_text as syllabus FROM modules m JOIN courses c ON m.course_id = c.slug WHERE c.id = \" + ($json.course_id || 19) + \" AND m.module_number = \" + ($json.current_module || 1) + \" LIMIT 1\" }}",
+                    "options": {
+                        "alwaysOutputData": true
+                    }
+                },
+                "id": "get-module-v30",
+                "name": "Get Module",
+                "type": "n8n-nodes-base.postgres",
+                "typeVersion": 2.6,
+                "position": [
+                    800,
+                    300
+                ],
+                "credentials": {
+                    "postgres": {
+                        "id": "lJaeEy4CpHbhgMAp",
+                        "name": "Kreativ PostgreSQL"
+                    }
+                }
+            },
+            {
+                "parameters": {
+                    "method": "POST",
+                    "url": "https://openrouter.ai/api/v1/chat/completions",
+                    "sendHeaders": true,
+                    "headerParameters": {
+                        "parameters": [
+                            {
+                                "name": "Authorization",
+                                "value": "Bearer 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"
+                            }
+                        ]
+                    },
+                    "sendBody": true,
+                    "specifyBody": "json",
+                    "jsonBody": "={{ JSON.stringify({\n  model: 'deepseek/deepseek-chat',\n  messages: [\n    {\n      role: 'system',\n      content: `ALUNO: ${$node[\"Get Student\"].json.name}\\nEMENTA: ${$node[\"Get Module\"].json.syllabus}\\n\\nD\u00ea a aula amig\u00e1vel.` \n    },\n    { role: 'user', content: $node[\"Transformer\"].json.body }\n  ]\n}) }}",
+                    "options": {
+                        "timeout": 120000
+                    }
+                },
+                "id": "openrouter-v30",
+                "name": "AI Generator",
+                "type": "n8n-nodes-base.httpRequest",
+                "typeVersion": 4.1,
+                "position": [
+                    1000,
+                    300
+                ]
+            },
+            {
+                "parameters": {
+                    "method": "POST",
+                    "url": "http://kreativ_builderbot:3008/api/send",
+                    "sendBody": true,
+                    "specifyBody": "json",
+                    "jsonBody": "={{ JSON.stringify({ phone: $node[\"Transformer\"].json.phone, message: $json.choices[0].message.content }) }}"
+                },
+                "id": "send-wa-v30",
+                "name": "Send WhatsApp",
+                "type": "n8n-nodes-base.httpRequest",
+                "typeVersion": 4.1,
+                "position": [
+                    1200,
+                    300
+                ]
+            }
+        ],
+        "connections": {
+            "Webhook": {
+                "main": [
+                    [
+                        {
+                            "node": "Transformer",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Transformer": {
+                "main": [
+                    [
+                        {
+                            "node": "Get Student",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Get Student": {
+                "main": [
+                    [
+                        {
+                            "node": "Get Module",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Get Module": {
+                "main": [
+                    [
+                        {
+                            "node": "AI Generator",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "AI Generator": {
+                "main": [
+                    [
+                        {
+                            "node": "Send WhatsApp",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            }
+        },
+        "authors": "Rafael da Silva",
+        "name": null,
+        "description": null,
+        "autosaved": false,
+        "workflowPublishHistory": [
+            {
+                "createdAt": "2026-02-22T04:16:52.541Z",
+                "id": 1578,
+                "workflowId": "a0RywHWeY5kfgzGT",
+                "versionId": "678f1f19-5204-4af4-ac18-1c7f09ca6368",
+                "event": "deactivated",
+                "userId": "d7e6ecc8-7259-4124-87c7-29a5f2d233ba"
+            },
+            {
+                "createdAt": "2026-02-22T04:16:52.563Z",
+                "id": 1579,
+                "workflowId": "a0RywHWeY5kfgzGT",
+                "versionId": "678f1f19-5204-4af4-ac18-1c7f09ca6368",
+                "event": "activated",
+                "userId": "d7e6ecc8-7259-4124-87c7-29a5f2d233ba"
+            }
+        ]
+    }
+}
