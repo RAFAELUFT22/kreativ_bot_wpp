@@ -246,3 +246,143 @@ Após salvar tudo, acesse https://dash.extensionista.site e confirme:
 3. Nenhum card mostra erro de SQL (se aparecer erro vermelho, copie a mensagem e informe)
 
 **Se algum card mostrar erro de permissão ou "table not found"**, verifique se a conexão de banco está usando `kreativ_user` no database `kreativ_edu` (não `postgres` nem `n8n`).
+
+
+---
+
+## PARTE 3 — Dashboard "Kreativ — Monitoramento" (segundo dashboard)
+
+> Dashboard operacional separado. Focado em ação, não em KPI.
+> Criado em paralelo ao "Visão Operacional" ou após ele.
+
+### Passo 3.1 — Criar o dashboard
+
+1. Home → "New +" → "Dashboard"
+2. Nome: `Kreativ — Monitoramento`
+3. Salve vazio
+
+### Passo 3.2 — Big Number: "Certificados Emitidos"
+
+SQL:
+```sql
+SELECT COUNT(*) AS certificados_emitidos FROM certificates
+```
+Visualização: Number | Label: `Certificados Emitidos`
+Salve: `Monitor 1 — Certificados Emitidos` → Add to `Kreativ — Monitoramento`
+
+### Passo 3.3 — Big Number: "Alunos Parados >7 dias"
+
+SQL:
+```sql
+SELECT COUNT(*) AS parados
+FROM students
+WHERE updated_at < NOW() - INTERVAL '7 days'
+  AND attendance_status = 'bot'
+  AND current_module > 0
+```
+Visualização: Number | Label: `Alunos Parados >7 dias`
+Salve: `Monitor 2 — Alunos Parados` → Add to dashboard
+
+### Passo 3.4 — Big Number: "Alunos Novos ≤3 dias"
+
+SQL:
+```sql
+SELECT COUNT(*) AS novos FROM students
+WHERE created_at >= NOW() - INTERVAL '3 days'
+```
+Visualização: Number | Label: `Alunos Novos (últimos 3 dias)`
+Salve: `Monitor 3 — Alunos Novos` → Add to dashboard
+
+### Passo 3.5 — Big Number: "Pré-inscrições Aguardando"
+
+SQL:
+```sql
+SELECT COUNT(*) AS aguardando
+FROM pre_inscriptions
+WHERE convertido = false AND telefone_valido = true
+```
+Visualização: Number | Label: `Pré-inscrições Aguardando`
+Salve: `Monitor 4 — Pre-inscrições` → Add to dashboard
+
+### Passo 3.6 — Tabela: "Alunos Parados >7 dias" (com telefone)
+
+SQL:
+```sql
+SELECT
+  COALESCE(name, 'Sem nome') AS nome,
+  phone AS telefone,
+  current_module AS modulo_atual,
+  EXTRACT(DAY FROM NOW() - updated_at)::int AS dias_parado,
+  'https://wa.me/' || phone AS link_whatsapp
+FROM students
+WHERE updated_at < NOW() - INTERVAL '7 days'
+  AND attendance_status = 'bot'
+  AND current_module > 0
+ORDER BY updated_at ASC
+```
+Visualização: **Table** (não gráfico — precisa do telefone para ação direta)
+Salve: `Monitor 5 — Lista Parados >7d` → Add to dashboard
+
+### Passo 3.7 — Tabela: "Reprovados sem aprovação"
+
+SQL:
+```sql
+SELECT
+  s.name AS nome,
+  s.phone AS telefone,
+  ep.module_number AS modulo,
+  ep.score AS ultimo_score,
+  COUNT(*) AS tentativas
+FROM enrollment_progress ep
+JOIN students s ON s.id = ep.student_id
+WHERE ep.status = 'failed'
+  AND NOT EXISTS (
+    SELECT 1 FROM enrollment_progress ep2
+    WHERE ep2.student_id = ep.student_id
+      AND ep2.module_number = ep.module_number
+      AND ep2.status = 'passed'
+  )
+GROUP BY s.name, s.phone, ep.module_number, ep.score
+ORDER BY tentativas DESC, ep.score ASC
+```
+Visualização: **Table**
+Salve: `Monitor 6 — Reprovados sem aprovação` → Add to dashboard
+
+### Passo 3.8 — Bar Chart: "Taxa de Aprovação por Módulo"
+
+SQL:
+```sql
+SELECT
+  CONCAT('Módulo ', module_number) AS modulo,
+  COUNT(*) FILTER (WHERE status = 'passed') AS aprovados,
+  COUNT(*) FILTER (WHERE status = 'failed') AS reprovados,
+  ROUND(100.0 * COUNT(*) FILTER (WHERE status = 'passed') / NULLIF(COUNT(*), 0), 1) AS taxa_pct
+FROM enrollment_progress
+GROUP BY module_number
+ORDER BY module_number
+```
+Visualização: Bar | X = `modulo` | Y = `aprovados` e `reprovados` (grouped)
+Salve: `Monitor 7 — Taxa Aprovação por Módulo` → Add to dashboard
+
+### Passo 3.9 — Bar horizontal: "Funil de Conversão"
+
+SQL:
+```sql
+SELECT unnest(ARRAY['Pré-inscrições','Alunos cadastrados','Iniciaram','Certificados']) AS etapa,
+       unnest(ARRAY[
+         (SELECT COUNT(*) FROM pre_inscriptions)::int,
+         (SELECT COUNT(*) FROM students)::int,
+         (SELECT COUNT(*) FROM students WHERE current_module > 0)::int,
+         (SELECT COUNT(*) FROM certificates)::int
+       ]) AS total
+```
+Visualização: Bar (horizontal se disponível) | X = `etapa` | Y = `total`
+Salve: `Monitor 8 — Funil de Conversão` → Add to dashboard
+
+### Passo 3.10 — Organizar layout
+
+```
+Linha 1: [Certificados] [Parados >7d] [Novos ≤3d] [Pré-inscrições]  ← 4 big numbers
+Linha 2: [Tabela Parados >7d]  [Tabela Reprovados]                   ← 2 tables, 50/50
+Linha 3: [Taxa Aprovação — Bar]  [Funil — Bar horizontal]            ← 2 charts, 50/50
+```

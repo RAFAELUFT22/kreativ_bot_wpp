@@ -609,3 +609,162 @@ Antes de reportar conclusão, confirme cada item:
 1. Verifique o nome do componente — deve ser exatamente como especificado (case-sensitive)
 2. Verifique se a query está configurada para "run on page load" onde necessário
 3. Abra o painel de queries e clique em "Run" manualmente para verificar se retorna dados
+
+
+---
+
+## FASE 9 — Upload de Arquivos e Pré-inscrições (adicionar após Fase 8)
+
+### Passo 9.1 — Query 8: uploadModuleFile
+
+1. No app "Kreativ Admin" → Queries → "+ Add query" → "Run JavaScript"
+2. Name: `uploadModuleFile`
+3. Código:
+   ```javascript
+   const file = filePickerModule.file;
+   if (!file) return { error: 'Nenhum arquivo selecionado' };
+
+   const reader = new FileReader();
+   const base64 = await new Promise((resolve) => {
+     reader.onload = (e) => resolve(e.target.result.split(',')[1]);
+     reader.readAsDataURL(file);
+   });
+
+   const ext = file.name.split('.').pop().toLowerCase();
+   const fileType = ext === 'pdf' ? 'pdf'
+                  : ext === 'docx' ? 'docx'
+                  : ['jpg','jpeg','png','webp'].includes(ext) ? 'image'
+                  : 'pdf';
+
+   const response = await fetch('https://n8n.extensionista.site/webhook/kreativ-unified-api', {
+     method: 'POST',
+     headers: { 'Content-Type': 'application/json' },
+     body: JSON.stringify({
+       action: 'admin_upload_module_file',
+       phone: '556399374165',
+       module_id: loadModulo.data[0]?.id,
+       file_name: file.name,
+       file_base64: base64,
+       file_type: fileType,
+       replace_content: replaceContentToggle.value ?? true
+     })
+   });
+   const data = await response.json();
+   if (data.ok) {
+     alert(`✅ Upload concluído! ${data.chunks_inserted || 0} chunks gerados.`);
+   } else {
+     alert('❌ Erro: ' + JSON.stringify(data));
+   }
+   return data;
+   ```
+4. Run on page load: NÃO
+5. Save
+
+### Passo 9.2 — Query 9: addVideoUrl
+
+1. "+ Add query" → "Run JavaScript"
+2. Name: `addVideoUrl`
+3. Código:
+   ```javascript
+   const url = videoUrlInput.value;
+   if (!url || !url.startsWith('http')) return { error: 'URL inválida' };
+   const response = await fetch('https://n8n.extensionista.site/webhook/kreativ-unified-api', {
+     method: 'POST',
+     headers: { 'Content-Type': 'application/json' },
+     body: JSON.stringify({
+       action: 'admin_upload_module_file',
+       phone: '556399374165',
+       module_id: loadModulo.data[0]?.id,
+       file_name: url,
+       file_base64: url,
+       file_type: 'video_url'
+     })
+   });
+   const data = await response.json();
+   alert(data.ok ? '✅ URL adicionada!' : '❌ Erro: ' + JSON.stringify(data));
+   return data;
+   ```
+4. Run on page load: NÃO
+5. Save
+
+### Passo 9.3 — Query 10: listPreInscricoes
+
+1. "+ Add query" → "PostgreSQL" (Kreativ PostgreSQL)
+2. Name: `listPreInscricoes`
+3. SQL:
+   ```sql
+   SELECT
+     pi.id::text,
+     COALESCE(pi.nome_completo, 'Sem nome') AS name,
+     pi.telefone_whatsapp AS phone,
+     COALESCE(pi.cidade, '') AS cidade,
+     COALESCE(pi.estado, '') AS estado,
+     STRING_AGG(c.name, ', ') AS cursos_interesse,
+     TO_CHAR(pi.data_primeira_inscricao AT TIME ZONE 'America/Sao_Paulo', 'DD/MM/YYYY') AS cadastrado_em
+   FROM pre_inscriptions pi
+   LEFT JOIN pre_inscription_courses pic ON pic.pre_inscription_id = pi.id
+   LEFT JOIN courses c ON c.id = pic.course_id
+   WHERE pi.convertido = false
+     AND pi.telefone_valido = true
+     AND (
+       '{{searchPreInput.value}}' = ''
+       OR pi.nome_completo ILIKE '%' || '{{searchPreInput.value}}' || '%'
+       OR pi.telefone_whatsapp ILIKE '%' || '{{searchPreInput.value}}' || '%'
+       OR pi.cidade ILIKE '%' || '{{searchPreInput.value}}' || '%'
+     )
+   GROUP BY pi.id, pi.nome_completo, pi.telefone_whatsapp, pi.cidade, pi.estado, pi.data_primeira_inscricao
+   ORDER BY pi.data_primeira_inscricao DESC
+   LIMIT 100
+   ```
+4. Run on page load: SIM (quando na página Pré-inscrições)
+5. Save
+
+### Passo 9.4 — Seção de arquivos no modal "editModuloModal"
+
+Dentro do modal `editModuloModal` (após o Toggle "Publicado"), adicione:
+
+1. **Separador visual**: componente "Divider" ou Text com `---`
+2. **Text**: Content = `📎 Arquivos do Módulo`
+3. **Text** (lista atual): Content = `{{(loadModulo.data[0]?.media_urls || []).join('\n')}}`
+4. **File Picker**: Name = `filePickerModule`, Accept = `.pdf,.docx,.jpg,.jpeg,.png`
+5. **Toggle**: Name = `replaceContentToggle`, Label = `Substituir conteúdo de texto`, Default = `true`
+6. **Button** "Fazer Upload":
+   - onClick → Run query → `uploadModuleFile`
+   - On success → Re-run `loadModulo`
+7. **Text Input**: Name = `videoUrlInput`, Placeholder = `URL do YouTube ou Vimeo`
+8. **Button** "Adicionar URL":
+   - onClick → Run query → `addVideoUrl`
+   - On success → Re-run `loadModulo`
+
+### Passo 9.5 — Nova Página "Preinscricoes"
+
+1. No editor, adicione uma 4ª página: `Preinscricoes`
+2. Adicione:
+   - **Text Input**: Name = `searchPreInput`, Placeholder = `Buscar por nome, telefone ou cidade...`, On change → Run `listPreInscricoes`
+   - **Text** (contador): Content = `Total aguardando: {{listPreInscricoes.data?.length ?? 0}} (mostrando até 100)`
+   - **Table**: Name = `preTable`, Data = `{{listPreInscricoes.data}}`
+     - Colunas: name (Nome), phone (Telefone), cidade (Cidade), cursos_interesse (Cursos), cadastrado_em (Cadastro)
+   - **Button** "Matricular Selecionado":
+     - Visível apenas quando `{{preTable.selectedRow?.data?.phone}}`
+     - onClick → Run JavaScript:
+       ```javascript
+       const row = preTable.selectedRow.data;
+       const r = await fetch('https://n8n.extensionista.site/webhook/kreativ-unified-api', {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({
+           action: 'admin_upsert_student',
+           phone: row.phone,
+           name: row.name,
+           current_module: 1
+         })
+       });
+       const data = await r.json();
+       if (data.id || data.phone) {
+         alert('✅ Aluno matriculado! ID: ' + (data.id || data.phone));
+         listPreInscricoes.run();
+       } else {
+         alert('Erro: ' + JSON.stringify(data));
+       }
+       ```
+     - **IMPORTANTE:** Este botão NUNCA envia mensagem — apenas cria o registro no banco.
