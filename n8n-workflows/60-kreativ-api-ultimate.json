@@ -1,5 +1,5 @@
 {
-    "updatedAt": "2026-02-22T12:51:01.365Z",
+    "updatedAt": "2026-02-22T12:57:42.728Z",
     "createdAt": "2026-02-21T21:18:29.584Z",
     "id": "SoB5evP9aOmj6hLA",
     "name": "Kreativ: Unified API Router (v1.1 - ULTIMATE)",
@@ -1339,6 +1339,49 @@
             "id": "ai-tutor-enviar-wpp",
             "name": "AI Tutor: Enviar WhatsApp",
             "continueOnFail": true
+        },
+        {
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={{ JSON.stringify({ ok: true, response: 'Avaliando suas respostas... \u2705 Resultado em instantes!' }) }}",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1,
+            "position": [
+                580,
+                608
+            ],
+            "id": "quiz-responder-200",
+            "name": "Quiz: Responder 200"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://kreativ_evolution:8080/message/sendText/europs",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "apikey",
+                            "value": "EXr5OuEE2sBMbRo94LtWQfofvEF1gHUM"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ ({number: $('Quiz: Processar Resultado').first().json.phone,text: '\ud83d\udcca *Resultado do Quiz \u2014 M\u00f3dulo ' + $('Quiz: Processar Resultado').first().json.module_number + '*\\n\\n' + '\u2705 Nota: ' + $('Quiz: Processar Resultado').first().json.score + '/100\\n\\n' + $('Quiz: Processar Resultado').first().json.feedback + ($('Quiz: Processar Resultado').first().json.passed   ? '\\n\\n\ud83c\udf89 Aprovado! Pr\u00f3ximo m\u00f3dulo: ' + ($('Quiz: Processar Resultado').first().json.next_module || '\u00faltimo')   : '\\n\\n\ud83d\udcda Continue estudando e tente novamente!')}) }}",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                1900,
+                608
+            ],
+            "id": "quiz-enviar-wpp",
+            "name": "Quiz: Enviar WhatsApp",
+            "continueOnFail": true
         }
     ],
     "connections": {
@@ -1403,7 +1446,7 @@
                 ],
                 [
                     {
-                        "node": "Quiz: Buscar Contexto",
+                        "node": "Quiz: Responder 200",
                         "type": "main",
                         "index": 0
                     }
@@ -1694,7 +1737,7 @@
             "main": [
                 [
                     {
-                        "node": "Responder Typebot",
+                        "node": "Quiz: Enviar WhatsApp",
                         "type": "main",
                         "index": 0
                     }
@@ -1978,6 +2021,17 @@
                     }
                 ]
             ]
+        },
+        "Quiz: Responder 200": {
+            "main": [
+                [
+                    {
+                        "node": "Quiz: Buscar Contexto",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
         }
     },
     "settings": {
@@ -1988,9 +2042,9 @@
     "staticData": null,
     "meta": null,
     "pinData": {},
-    "versionId": "e64ae300-342f-4305-a250-65c886fafc3a",
-    "activeVersionId": "e64ae300-342f-4305-a250-65c886fafc3a",
-    "versionCounter": 105,
+    "versionId": "5bd49343-10e9-4493-8fc5-9758da833bdb",
+    "activeVersionId": "5bd49343-10e9-4493-8fc5-9758da833bdb",
+    "versionCounter": 110,
     "triggerCount": 1,
     "shared": [
         {
@@ -2013,9 +2067,9 @@
     ],
     "tags": [],
     "activeVersion": {
-        "updatedAt": "2026-02-22T12:51:01.371Z",
-        "createdAt": "2026-02-22T12:51:01.371Z",
-        "versionId": "e64ae300-342f-4305-a250-65c886fafc3a",
+        "updatedAt": "2026-02-22T12:57:42.732Z",
+        "createdAt": "2026-02-22T12:57:42.732Z",
+        "versionId": "5bd49343-10e9-4493-8fc5-9758da833bdb",
         "workflowId": "SoB5evP9aOmj6hLA",
         "nodes": [
             {
@@ -3350,6 +3404,49 @@
                 "id": "ai-tutor-enviar-wpp",
                 "name": "AI Tutor: Enviar WhatsApp",
                 "continueOnFail": true
+            },
+            {
+                "parameters": {
+                    "respondWith": "json",
+                    "responseBody": "={{ JSON.stringify({ ok: true, response: 'Avaliando suas respostas... \u2705 Resultado em instantes!' }) }}",
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.respondToWebhook",
+                "typeVersion": 1,
+                "position": [
+                    580,
+                    608
+                ],
+                "id": "quiz-responder-200",
+                "name": "Quiz: Responder 200"
+            },
+            {
+                "parameters": {
+                    "method": "POST",
+                    "url": "http://kreativ_evolution:8080/message/sendText/europs",
+                    "sendHeaders": true,
+                    "headerParameters": {
+                        "parameters": [
+                            {
+                                "name": "apikey",
+                                "value": "EXr5OuEE2sBMbRo94LtWQfofvEF1gHUM"
+                            }
+                        ]
+                    },
+                    "sendBody": true,
+                    "specifyBody": "json",
+                    "jsonBody": "={{ ({number: $('Quiz: Processar Resultado').first().json.phone,text: '\ud83d\udcca *Resultado do Quiz \u2014 M\u00f3dulo ' + $('Quiz: Processar Resultado').first().json.module_number + '*\\n\\n' + '\u2705 Nota: ' + $('Quiz: Processar Resultado').first().json.score + '/100\\n\\n' + $('Quiz: Processar Resultado').first().json.feedback + ($('Quiz: Processar Resultado').first().json.passed   ? '\\n\\n\ud83c\udf89 Aprovado! Pr\u00f3ximo m\u00f3dulo: ' + ($('Quiz: Processar Resultado').first().json.next_module || '\u00faltimo')   : '\\n\\n\ud83d\udcda Continue estudando e tente novamente!')}) }}",
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.httpRequest",
+                "typeVersion": 4.2,
+                "position": [
+                    1900,
+                    608
+                ],
+                "id": "quiz-enviar-wpp",
+                "name": "Quiz: Enviar WhatsApp",
+                "continueOnFail": true
             }
         ],
         "connections": {
@@ -3414,7 +3511,7 @@
                     ],
                     [
                         {
-                            "node": "Quiz: Buscar Contexto",
+                            "node": "Quiz: Responder 200",
                             "type": "main",
                             "index": 0
                         }
@@ -3705,7 +3802,7 @@
                 "main": [
                     [
                         {
-                            "node": "Responder Typebot",
+                            "node": "Quiz: Enviar WhatsApp",
                             "type": "main",
                             "index": 0
                         }
@@ -3989,6 +4086,17 @@
                         }
                     ]
                 ]
+            },
+            "Quiz: Responder 200": {
+                "main": [
+                    [
+                        {
+                            "node": "Quiz: Buscar Contexto",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
             }
         },
         "authors": "Rafael da Silva",
@@ -3997,34 +4105,34 @@
         "autosaved": false,
         "workflowPublishHistory": [
             {
-                "createdAt": "2026-02-22T12:51:02.652Z",
-                "id": 1702,
+                "createdAt": "2026-02-22T12:57:43.096Z",
+                "id": 1706,
                 "workflowId": "SoB5evP9aOmj6hLA",
-                "versionId": "e64ae300-342f-4305-a250-65c886fafc3a",
+                "versionId": "5bd49343-10e9-4493-8fc5-9758da833bdb",
                 "event": "deactivated",
                 "userId": "d7e6ecc8-7259-4124-87c7-29a5f2d233ba"
             },
             {
-                "createdAt": "2026-02-22T12:51:02.792Z",
-                "id": 1703,
+                "createdAt": "2026-02-22T12:57:43.534Z",
+                "id": 1707,
                 "workflowId": "SoB5evP9aOmj6hLA",
-                "versionId": "e64ae300-342f-4305-a250-65c886fafc3a",
+                "versionId": "5bd49343-10e9-4493-8fc5-9758da833bdb",
                 "event": "activated",
                 "userId": "d7e6ecc8-7259-4124-87c7-29a5f2d233ba"
             },
             {
-                "createdAt": "2026-02-22T12:51:54.951Z",
-                "id": 1704,
+                "createdAt": "2026-02-22T12:57:43.781Z",
+                "id": 1708,
                 "workflowId": "SoB5evP9aOmj6hLA",
-                "versionId": "e64ae300-342f-4305-a250-65c886fafc3a",
+                "versionId": "5bd49343-10e9-4493-8fc5-9758da833bdb",
                 "event": "deactivated",
                 "userId": "d7e6ecc8-7259-4124-87c7-29a5f2d233ba"
             },
             {
-                "createdAt": "2026-02-22T12:51:54.999Z",
-                "id": 1705,
+                "createdAt": "2026-02-22T12:57:43.823Z",
+                "id": 1709,
                 "workflowId": "SoB5evP9aOmj6hLA",
-                "versionId": "e64ae300-342f-4305-a250-65c886fafc3a",
+                "versionId": "5bd49343-10e9-4493-8fc5-9758da833bdb",
                 "event": "activated",
                 "userId": "d7e6ecc8-7259-4124-87c7-29a5f2d233ba"
             }
