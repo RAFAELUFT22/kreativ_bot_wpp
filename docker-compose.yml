@@ -623,6 +623,36 @@ services:
       postgres:
         condition: service_healthy
 
+  # ---------------------------------------------------------------------------
+  # KREATIV INGEST: PDF/DOCX → MinIO + content_text + embeddings
+  # ---------------------------------------------------------------------------
+  kreativ_ingest:
+    image: kreativ_ingest:latest
+    build:
+      context: ./services/ingest
+      dockerfile: Dockerfile
+    container_name: kreativ_ingest
+    restart: unless-stopped
+    networks:
+      - kreativ_net
+    environment:
+      - POSTGRES_HOST=kreativ_postgres
+      - POSTGRES_DB=kreativ_edu
+      - POSTGRES_USER=kreativ_user
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - MINIO_ENDPOINT=http://kreativ_minio:9000
+      - MINIO_PUBLIC_URL=https://files.extensionista.site
+      - MINIO_ACCESS_KEY=${MINIO_ROOT_USER}
+      - MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD}
+      - OPEN_ROUTER_API=${OPEN_ROUTER_API}
+    mem_limit: 200m
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
 volumes:
   postgres_data:
   redis_data:
