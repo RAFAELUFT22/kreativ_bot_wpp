@@ -1,5 +1,5 @@
 {
-    "updatedAt": "2026-02-22T11:20:52.908Z",
+    "updatedAt": "2026-02-22T12:51:01.365Z",
     "createdAt": "2026-02-21T21:18:29.584Z",
     "id": "SoB5evP9aOmj6hLA",
     "name": "Kreativ: Unified API Router (v1.1 - ULTIMATE)",
@@ -533,34 +533,6 @@
                 400
             ],
             "id": "15be7269-bce7-4304-b55a-49b6c66bd79e"
-        },
-        {
-            "parameters": {
-                "workflowId": "5caL67H387euTxan",
-                "options": {
-                    "waitForSubWorkflow": true
-                },
-                "fields": {
-                    "values": [
-                        {
-                            "name": "phone",
-                            "stringValue": "={{ $json.phone }}"
-                        },
-                        {
-                            "name": "body",
-                            "stringValue": "={{ $json.message || $json.body || 'Oi' }}"
-                        }
-                    ]
-                }
-            },
-            "name": "AI Tutor: Proxy Request",
-            "type": "n8n-nodes-base.executeWorkflow",
-            "typeVersion": 1,
-            "position": [
-                800,
-                800
-            ],
-            "id": "c54510b0-9118-4043-981f-ef3ed8d665a7"
         },
         {
             "parameters": {
@@ -1146,6 +1118,227 @@
                     "responseCode": 400
                 }
             }
+        },
+        {
+            "parameters": {
+                "assignments": {
+                    "assignments": [
+                        {
+                            "id": "70ef5e5a-d9b9-42c4-a265-c4c72dd04ed8",
+                            "name": "phone",
+                            "value": "={{ $json.phone }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "b3f9d7f4-e4d8-4296-b350-8ffce2ed62ed",
+                            "name": "message",
+                            "value": "={{ $json.message || $json.body || 'Ol\u00e1' }}",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.4,
+            "position": [
+                800,
+                800
+            ],
+            "id": "ai-tutor-extrair-input",
+            "name": "AI Tutor: Extrair Input"
+        },
+        {
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={{ JSON.stringify({ ok: true, response: 'Seu tutor est\u00e1 analisando... \ud83e\udd14' }) }}",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1,
+            "position": [
+                1020,
+                800
+            ],
+            "id": "ai-tutor-responder-200",
+            "name": "AI Tutor: Responder 200"
+        },
+        {
+            "parameters": {
+                "jsCode": "// Redis Read History via TCP RESP protocol\nconst net = require('net');\nconst REDIS_HOST = 'kreativ_redis';\nconst REDIS_PASS = 'kNiaYOxriWOcSiZyXhb5C9LU';\nconst REDIS_PORT = 6379;\n\nconst phone = $('AI Tutor: Extrair Input').first().json.phone || '';\nconst message = $('AI Tutor: Extrair Input').first().json.message || '';\n\nif (!phone) return [{ json: { historyMessages: [], phone, message } }];\n\nconst key = 'chat_history:' + phone;\n\nfunction mkCmd(args) {\n  const CRLF = '\\r\\n';\n  let out = '*' + args.length + CRLF;\n  for (const a of args) {\n    const s = String(a);\n    out += '$' + Buffer.byteLength(s, 'utf8') + CRLF + s + CRLF;\n  }\n  return out;\n}\n\nfunction parseRespArray(buf) {\n  const lines = buf.split('\\r\\n');\n  const results = [];\n  let i = 0;\n  while (i < lines.length && !lines[i].startsWith('*')) i++;\n  if (i >= lines.length) return results;\n  const count = parseInt(lines[i].substring(1), 10);\n  i++;\n  for (let j = 0; j < count; j++) {\n    if (i >= lines.length) break;\n    if (lines[i].startsWith('$')) {\n      i++;\n      if (i < lines.length) { results.push(lines[i]); i++; }\n    } else { i++; }\n  }\n  return results;\n}\n\nreturn new Promise((resolve) => {\n  const client = new net.Socket();\n  let buf = '';\n  let done = false;\n\n  const finish = (messages) => {\n    if (done) return;\n    done = true;\n    try { client.destroy(); } catch(e) {}\n    resolve([{ json: { historyMessages: messages, phone, message } }]);\n  };\n\n  client.connect(REDIS_PORT, REDIS_HOST, () => {\n    client.write(mkCmd(['AUTH', REDIS_PASS]));\n    client.write(mkCmd(['LRANGE', key, '0', '9']));\n  });\n\n  client.on('data', (data) => {\n    buf += data.toString('utf8');\n    if (buf.includes('+OK\\r\\n') && (buf.includes('*') || buf.includes('$-1'))) {\n      const afterAuth = buf.substring(buf.indexOf('+OK\\r\\n') + 5);\n      if (afterAuth.startsWith('*0')) {\n        finish([]);\n      } else if (afterAuth.startsWith('*')) {\n        const countMatch = afterAuth.match(/^\\*(\\d+)/);\n        if (countMatch) {\n          const expected = parseInt(countMatch[1], 10);\n          const parts = afterAuth.split('\\r\\n');\n          const dataLines = parts.filter(p => p.length > 0 && !p.startsWith('*') && !p.startsWith('$'));\n          if (dataLines.length >= expected) {\n            finish(parseRespArray(buf));\n          }\n        }\n      } else if (afterAuth.startsWith('$-1')) {\n        finish([]);\n      }\n    }\n  });\n\n  client.on('error', (err) => {\n    if (done) return;\n    done = true;\n    resolve([{ json: { historyMessages: [], phone, message, error: err.message } }]);\n  });\n\n  client.on('close', () => {\n    if (!done) {\n      const messages = buf.includes('+OK\\r\\n') ? parseRespArray(buf) : [];\n      finish(messages);\n    }\n  });\n\n  setTimeout(() => {\n    if (!done) {\n      const messages = buf.includes('+OK\\r\\n') ? parseRespArray(buf) : [];\n      finish(messages);\n    }\n  }, 3000);\n});\n"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1240,
+                800
+            ],
+            "id": "ai-tutor-redis-ler",
+            "name": "AI Tutor: Redis Ler Hist\u00f3rico"
+        },
+        {
+            "parameters": {
+                "operation": "executeQuery",
+                "query": "SELECT s.name, s.course_id, s.current_module, c.name as course_name, s.lead_score\nFROM students s\nLEFT JOIN courses c ON s.course_id = c.id\nWHERE s.phone = '{{ $json.phone }}'\nLIMIT 1",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.postgres",
+            "typeVersion": 2.5,
+            "position": [
+                1460,
+                800
+            ],
+            "id": "ai-tutor-buscar-aluno",
+            "name": "AI Tutor: Buscar Aluno",
+            "credentials": {
+                "postgres": {
+                    "id": "lJaeEy4CpHbhgMAp",
+                    "name": "Kreativ PostgreSQL"
+                }
+            },
+            "continueOnFail": true
+        },
+        {
+            "parameters": {
+                "jsCode": "const rows = $input.all();\nconst phone = $('AI Tutor: Extrair Input').first().json.phone;\nconst message = $('AI Tutor: Extrair Input').first().json.message;\n\nif (rows.length > 0 && rows[0].json && rows[0].json.course_id) {\n  const std = rows[0].json;\n  return [{ json: { ...std, phone, message, name: std.name || 'Aluno' } }];\n}\nreturn [{ json: {\n  name: 'Visitante',\n  course_id: 19,\n  current_module: 1,\n  course_name: 'IA no Dia a Dia',\n  phone,\n  message\n} }];\n"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1680,
+                800
+            ],
+            "id": "ai-tutor-aluno-fallback",
+            "name": "AI Tutor: Aluno Fallback"
+        },
+        {
+            "parameters": {
+                "operation": "executeQuery",
+                "query": "WITH module_data AS (\n  SELECT title, content_text AS syllabus, evaluation_rubric\n  FROM modules\n  WHERE course_int_id = {{ $json.course_id }}\n    AND module_number = {{ $json.current_module }}\n  LIMIT 1\n),\nrag_data AS (\n  SELECT dc.content, dc.metadata::text AS metadata\n  FROM document_chunks dc\n  JOIN modules m ON dc.module_id = m.id\n  WHERE m.course_int_id = {{ $json.course_id }}\n    AND m.module_number = {{ $json.current_module }}\n  ORDER BY dc.chunk_index ASC\n  LIMIT 5\n)\nSELECT\n  (SELECT row_to_json(md.*) FROM module_data md LIMIT 1) AS module_row,\n  (SELECT json_agg(rd.*) FROM rag_data rd) AS rag_chunks;",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.postgres",
+            "typeVersion": 2.5,
+            "position": [
+                1900,
+                800
+            ],
+            "id": "ai-tutor-buscar-contexto",
+            "name": "AI Tutor: Buscar Contexto",
+            "credentials": {
+                "postgres": {
+                    "id": "lJaeEy4CpHbhgMAp",
+                    "name": "Kreativ PostgreSQL"
+                }
+            },
+            "continueOnFail": true
+        },
+        {
+            "parameters": {
+                "jsCode": "// Agrega contexto e constr\u00f3i request DeepSeek\nconst std = $('AI Tutor: Aluno Fallback').first().json;\nconst histGuard = $('AI Tutor: Redis Ler Hist\u00f3rico').first().json;\nconst ctxRow = $json; // output do Combined Context Query\n\nconst phone = std.phone;\nconst userMessage = std.message;\n\n// Hist\u00f3rico\nconst historyRaw = histGuard.historyMessages || [];\nlet history = [];\ntry { history = historyRaw.map(h => JSON.parse(h)).reverse(); } catch(e) { history = []; }\n\n// Contexto do m\u00f3dulo\nconst moduleRow = ctxRow.module_row || null;\nconst ragChunks = Array.isArray(ctxRow.rag_chunks) ? ctxRow.rag_chunks : [];\nconst mod = moduleRow || { title: 'Introdu\u00e7\u00e3o', syllabus: 'Conte\u00fado em prepara\u00e7\u00e3o.', evaluation_rubric: null };\n\nlet ragContext = '';\nif (ragChunks.length > 0) {\n  ragContext = '\\n\\nMATERIAL DO M\u00d3DULO (BASE DE CONHECIMENTO):\\n' +\n    ragChunks.map((c, i) => `[${i+1}] ${c.content}`).join('\\n\\n');\n} else if (mod.syllabus) {\n  ragContext = '\\n\\nEMENTA DO M\u00d3DULO:\\n' + mod.syllabus;\n}\n\nconst systemLines = [\n  \"Voce e o Tutor IA da Kreativ Educacao. Responda em portugues, conciso e encorajador (max 3 paragrafos WhatsApp).\",\n  \"CURSO: \" + (std.course_name || \"Kreativ\") + \" | MODULO: \" + (std.current_module || 1),\n  \"ALUNO: \" + (std.name || \"Estudante\")\n];\nif (ragContext) { systemLines.push(ragContext); } else if (mod.syllabus) { systemLines.push(\"EMENTA: \" + mod.syllabus.substring(0, 800)); }\n\nconst systemPrompt = systemLines.filter(Boolean).join(\"\\n\");\nconst allMessages = [{ role: \"system\", content: systemPrompt }];\nfor (const m of history) { allMessages.push({ role: m.role, content: m.content }); }\nallMessages.push({ role: \"user\", content: userMessage || \"\" });\n\nreturn [{ json: {\n  phone,\n  userMessage,\n  dsModel: \"deepseek-chat\",\n  dsMessages: allMessages,\n  dsTemperature: 0.7,\n  dsMaxTokens: 400\n} }];\n"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                2120,
+                800
+            ],
+            "id": "ai-tutor-preparar-prompt",
+            "name": "AI Tutor: Preparar Prompt"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://api.deepseek.com/chat/completions",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer sk-412552782fbe4009a25a013825e6ab66"
+                        },
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ ({model:$json.dsModel,messages:$json.dsMessages,temperature:$json.dsTemperature,max_tokens:$json.dsMaxTokens}) }}",
+                "options": {
+                    "response": {
+                        "response": {
+                            "responseFormat": "json"
+                        }
+                    },
+                    "timeout": 120000
+                }
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                2340,
+                800
+            ],
+            "id": "ai-tutor-deepseek",
+            "name": "AI Tutor: DeepSeek",
+            "continueOnFail": true
+        },
+        {
+            "parameters": {
+                "jsCode": "const reqNode = $('AI Tutor: Preparar Prompt').first().json;\nconst phone = reqNode.phone;\nconst userMessage = reqNode.userMessage;\n\nlet choices;\ntry {\n  choices = $json.choices && $json.choices.length > 0\n    ? $json.choices\n    : [{ message: { content: 'Desculpe, tive um problema t\u00e9cnico. Pode repetir sua pergunta? \ud83d\udd27' } }];\n} catch(e) {\n  choices = [{ message: { content: 'Desculpe, tive um problema t\u00e9cnico. Pode repetir sua pergunta? \ud83d\udd27' } }];\n}\n\nconst aiContent = choices[0].message.content || 'Desculpe, n\u00e3o consegui processar sua mensagem.';\nreturn [{ json: { choices, phone, userMessage, aiContent } }];\n"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                2560,
+                800
+            ],
+            "id": "ai-tutor-extrair-resp",
+            "name": "AI Tutor: Extrair Resposta"
+        },
+        {
+            "parameters": {
+                "jsCode": "// Redis Write History via TCP RESP protocol\nconst net = require('net');\nconst REDIS_HOST = 'kreativ_redis';\nconst REDIS_PASS = 'kNiaYOxriWOcSiZyXhb5C9LU';\nconst REDIS_PORT = 6379;\n\nconst phone = $json.phone || '';\nconst userMsg = ($json.userMessage || '').substring(0, 1500);\nconst aiMsg = ($json.choices && $json.choices[0] && $json.choices[0].message)\n  ? $json.choices[0].message.content.substring(0, 1500) : '';\n\nif (!phone) return [{ json: { error: 'no phone' } }];\n\nconst key = 'chat_history:' + phone;\nconst userEntry = JSON.stringify({ role: 'user', content: userMsg });\nconst aiEntry   = JSON.stringify({ role: 'assistant', content: aiMsg });\n\nfunction mkCmd(args) {\n  const CRLF = '\\r\\n';\n  let out = '*' + args.length + CRLF;\n  for (const a of args) {\n    const s = String(a);\n    out += '$' + Buffer.byteLength(s, 'utf8') + CRLF + s + CRLF;\n  }\n  return out;\n}\n\nreturn new Promise((resolve) => {\n  const client = new net.Socket();\n  let buf = '';\n  let done = false;\n  const okCount = { n: 0 };\n\n  const finish = (result) => {\n    if (done) return;\n    done = true;\n    try { client.destroy(); } catch(e) {}\n    resolve(result);\n  };\n\n  client.connect(REDIS_PORT, REDIS_HOST, () => {\n    client.write(mkCmd(['AUTH', REDIS_PASS]));\n    client.write(mkCmd(['LPUSH', key, userEntry]));\n    client.write(mkCmd(['LPUSH', key, aiEntry]));\n    client.write(mkCmd(['LTRIM', key, '0', '19']));\n    client.write(mkCmd(['EXPIRE', key, '86400']));\n  });\n\n  client.on('data', (data) => {\n    buf += data.toString('utf8');\n    const parts = buf.split('\\r\\n');\n    const oks = parts.filter(p => p.startsWith('+') || p.startsWith(':'));\n    okCount.n = oks.length;\n    if (oks.length >= 5) {\n      finish([{ json: { phone, key, ok: oks.length, history_written: true, aiContent: aiMsg } }]);\n    }\n  });\n\n  client.on('error', (err) => {\n    finish([{ json: { phone, key, error: err.message, aiContent: aiMsg } }]);\n  });\n\n  client.on('close', () => {\n    finish([{ json: { phone, key, ok: okCount.n, closed: true, aiContent: aiMsg } }]);\n  });\n\n  setTimeout(() => {\n    finish([{ json: { phone, key, ok: okCount.n, timeout: true, aiContent: aiMsg } }]);\n  }, 5000);\n});\n"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                2780,
+                800
+            ],
+            "id": "ai-tutor-redis-gravar",
+            "name": "AI Tutor: Redis Gravar Hist\u00f3rico",
+            "continueOnFail": true
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://kreativ_evolution:8080/message/sendText/europs",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "apikey",
+                            "value": "EXr5OuEE2sBMbRo94LtWQfofvEF1gHUM"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ ({number:$('AI Tutor: Extrair Input').first().json.phone,text:$('AI Tutor: Extrair Resposta').first().json.aiContent}) }}",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                3000,
+                800
+            ],
+            "id": "ai-tutor-enviar-wpp",
+            "name": "AI Tutor: Enviar WhatsApp",
+            "continueOnFail": true
         }
     ],
     "connections": {
@@ -1217,7 +1410,7 @@
                 ],
                 [
                     {
-                        "node": "AI Tutor: Proxy Request",
+                        "node": "AI Tutor: Extrair Input",
                         "type": "main",
                         "index": 0
                     }
@@ -1399,17 +1592,6 @@
             ]
         },
         "Progress: Calcular": {
-            "main": [
-                [
-                    {
-                        "node": "Responder Typebot",
-                        "type": "main",
-                        "index": 0
-                    }
-                ]
-            ]
-        },
-        "AI Tutor: Proxy Request": {
             "main": [
                 [
                     {
@@ -1686,6 +1868,116 @@
                     }
                 ]
             ]
+        },
+        "AI Tutor: Extrair Input": {
+            "main": [
+                [
+                    {
+                        "node": "AI Tutor: Responder 200",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "AI Tutor: Responder 200": {
+            "main": [
+                [
+                    {
+                        "node": "AI Tutor: Redis Ler Hist\u00f3rico",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "AI Tutor: Redis Ler Hist\u00f3rico": {
+            "main": [
+                [
+                    {
+                        "node": "AI Tutor: Buscar Aluno",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "AI Tutor: Buscar Aluno": {
+            "main": [
+                [
+                    {
+                        "node": "AI Tutor: Aluno Fallback",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "AI Tutor: Aluno Fallback": {
+            "main": [
+                [
+                    {
+                        "node": "AI Tutor: Buscar Contexto",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "AI Tutor: Buscar Contexto": {
+            "main": [
+                [
+                    {
+                        "node": "AI Tutor: Preparar Prompt",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "AI Tutor: Preparar Prompt": {
+            "main": [
+                [
+                    {
+                        "node": "AI Tutor: DeepSeek",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "AI Tutor: DeepSeek": {
+            "main": [
+                [
+                    {
+                        "node": "AI Tutor: Extrair Resposta",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "AI Tutor: Extrair Resposta": {
+            "main": [
+                [
+                    {
+                        "node": "AI Tutor: Redis Gravar Hist\u00f3rico",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "AI Tutor: Redis Gravar Hist\u00f3rico": {
+            "main": [
+                [
+                    {
+                        "node": "AI Tutor: Enviar WhatsApp",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
         }
     },
     "settings": {
@@ -1696,9 +1988,9 @@
     "staticData": null,
     "meta": null,
     "pinData": {},
-    "versionId": "0efedf94-64ee-4af9-b21a-407728518140",
-    "activeVersionId": "0efedf94-64ee-4af9-b21a-407728518140",
-    "versionCounter": 100,
+    "versionId": "e64ae300-342f-4305-a250-65c886fafc3a",
+    "activeVersionId": "e64ae300-342f-4305-a250-65c886fafc3a",
+    "versionCounter": 105,
     "triggerCount": 1,
     "shared": [
         {
@@ -1721,9 +2013,9 @@
     ],
     "tags": [],
     "activeVersion": {
-        "updatedAt": "2026-02-22T11:20:52.914Z",
-        "createdAt": "2026-02-22T11:20:52.914Z",
-        "versionId": "0efedf94-64ee-4af9-b21a-407728518140",
+        "updatedAt": "2026-02-22T12:51:01.371Z",
+        "createdAt": "2026-02-22T12:51:01.371Z",
+        "versionId": "e64ae300-342f-4305-a250-65c886fafc3a",
         "workflowId": "SoB5evP9aOmj6hLA",
         "nodes": [
             {
@@ -2252,34 +2544,6 @@
                     400
                 ],
                 "id": "15be7269-bce7-4304-b55a-49b6c66bd79e"
-            },
-            {
-                "parameters": {
-                    "workflowId": "5caL67H387euTxan",
-                    "options": {
-                        "waitForSubWorkflow": true
-                    },
-                    "fields": {
-                        "values": [
-                            {
-                                "name": "phone",
-                                "stringValue": "={{ $json.phone }}"
-                            },
-                            {
-                                "name": "body",
-                                "stringValue": "={{ $json.message || $json.body || 'Oi' }}"
-                            }
-                        ]
-                    }
-                },
-                "name": "AI Tutor: Proxy Request",
-                "type": "n8n-nodes-base.executeWorkflow",
-                "typeVersion": 1,
-                "position": [
-                    800,
-                    800
-                ],
-                "id": "c54510b0-9118-4043-981f-ef3ed8d665a7"
             },
             {
                 "parameters": {
@@ -2865,6 +3129,227 @@
                         "responseCode": 400
                     }
                 }
+            },
+            {
+                "parameters": {
+                    "assignments": {
+                        "assignments": [
+                            {
+                                "id": "70ef5e5a-d9b9-42c4-a265-c4c72dd04ed8",
+                                "name": "phone",
+                                "value": "={{ $json.phone }}",
+                                "type": "string"
+                            },
+                            {
+                                "id": "b3f9d7f4-e4d8-4296-b350-8ffce2ed62ed",
+                                "name": "message",
+                                "value": "={{ $json.message || $json.body || 'Ol\u00e1' }}",
+                                "type": "string"
+                            }
+                        ]
+                    },
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.set",
+                "typeVersion": 3.4,
+                "position": [
+                    800,
+                    800
+                ],
+                "id": "ai-tutor-extrair-input",
+                "name": "AI Tutor: Extrair Input"
+            },
+            {
+                "parameters": {
+                    "respondWith": "json",
+                    "responseBody": "={{ JSON.stringify({ ok: true, response: 'Seu tutor est\u00e1 analisando... \ud83e\udd14' }) }}",
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.respondToWebhook",
+                "typeVersion": 1,
+                "position": [
+                    1020,
+                    800
+                ],
+                "id": "ai-tutor-responder-200",
+                "name": "AI Tutor: Responder 200"
+            },
+            {
+                "parameters": {
+                    "jsCode": "// Redis Read History via TCP RESP protocol\nconst net = require('net');\nconst REDIS_HOST = 'kreativ_redis';\nconst REDIS_PASS = 'kNiaYOxriWOcSiZyXhb5C9LU';\nconst REDIS_PORT = 6379;\n\nconst phone = $('AI Tutor: Extrair Input').first().json.phone || '';\nconst message = $('AI Tutor: Extrair Input').first().json.message || '';\n\nif (!phone) return [{ json: { historyMessages: [], phone, message } }];\n\nconst key = 'chat_history:' + phone;\n\nfunction mkCmd(args) {\n  const CRLF = '\\r\\n';\n  let out = '*' + args.length + CRLF;\n  for (const a of args) {\n    const s = String(a);\n    out += '$' + Buffer.byteLength(s, 'utf8') + CRLF + s + CRLF;\n  }\n  return out;\n}\n\nfunction parseRespArray(buf) {\n  const lines = buf.split('\\r\\n');\n  const results = [];\n  let i = 0;\n  while (i < lines.length && !lines[i].startsWith('*')) i++;\n  if (i >= lines.length) return results;\n  const count = parseInt(lines[i].substring(1), 10);\n  i++;\n  for (let j = 0; j < count; j++) {\n    if (i >= lines.length) break;\n    if (lines[i].startsWith('$')) {\n      i++;\n      if (i < lines.length) { results.push(lines[i]); i++; }\n    } else { i++; }\n  }\n  return results;\n}\n\nreturn new Promise((resolve) => {\n  const client = new net.Socket();\n  let buf = '';\n  let done = false;\n\n  const finish = (messages) => {\n    if (done) return;\n    done = true;\n    try { client.destroy(); } catch(e) {}\n    resolve([{ json: { historyMessages: messages, phone, message } }]);\n  };\n\n  client.connect(REDIS_PORT, REDIS_HOST, () => {\n    client.write(mkCmd(['AUTH', REDIS_PASS]));\n    client.write(mkCmd(['LRANGE', key, '0', '9']));\n  });\n\n  client.on('data', (data) => {\n    buf += data.toString('utf8');\n    if (buf.includes('+OK\\r\\n') && (buf.includes('*') || buf.includes('$-1'))) {\n      const afterAuth = buf.substring(buf.indexOf('+OK\\r\\n') + 5);\n      if (afterAuth.startsWith('*0')) {\n        finish([]);\n      } else if (afterAuth.startsWith('*')) {\n        const countMatch = afterAuth.match(/^\\*(\\d+)/);\n        if (countMatch) {\n          const expected = parseInt(countMatch[1], 10);\n          const parts = afterAuth.split('\\r\\n');\n          const dataLines = parts.filter(p => p.length > 0 && !p.startsWith('*') && !p.startsWith('$'));\n          if (dataLines.length >= expected) {\n            finish(parseRespArray(buf));\n          }\n        }\n      } else if (afterAuth.startsWith('$-1')) {\n        finish([]);\n      }\n    }\n  });\n\n  client.on('error', (err) => {\n    if (done) return;\n    done = true;\n    resolve([{ json: { historyMessages: [], phone, message, error: err.message } }]);\n  });\n\n  client.on('close', () => {\n    if (!done) {\n      const messages = buf.includes('+OK\\r\\n') ? parseRespArray(buf) : [];\n      finish(messages);\n    }\n  });\n\n  setTimeout(() => {\n    if (!done) {\n      const messages = buf.includes('+OK\\r\\n') ? parseRespArray(buf) : [];\n      finish(messages);\n    }\n  }, 3000);\n});\n"
+                },
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    1240,
+                    800
+                ],
+                "id": "ai-tutor-redis-ler",
+                "name": "AI Tutor: Redis Ler Hist\u00f3rico"
+            },
+            {
+                "parameters": {
+                    "operation": "executeQuery",
+                    "query": "SELECT s.name, s.course_id, s.current_module, c.name as course_name, s.lead_score\nFROM students s\nLEFT JOIN courses c ON s.course_id = c.id\nWHERE s.phone = '{{ $json.phone }}'\nLIMIT 1",
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.postgres",
+                "typeVersion": 2.5,
+                "position": [
+                    1460,
+                    800
+                ],
+                "id": "ai-tutor-buscar-aluno",
+                "name": "AI Tutor: Buscar Aluno",
+                "credentials": {
+                    "postgres": {
+                        "id": "lJaeEy4CpHbhgMAp",
+                        "name": "Kreativ PostgreSQL"
+                    }
+                },
+                "continueOnFail": true
+            },
+            {
+                "parameters": {
+                    "jsCode": "const rows = $input.all();\nconst phone = $('AI Tutor: Extrair Input').first().json.phone;\nconst message = $('AI Tutor: Extrair Input').first().json.message;\n\nif (rows.length > 0 && rows[0].json && rows[0].json.course_id) {\n  const std = rows[0].json;\n  return [{ json: { ...std, phone, message, name: std.name || 'Aluno' } }];\n}\nreturn [{ json: {\n  name: 'Visitante',\n  course_id: 19,\n  current_module: 1,\n  course_name: 'IA no Dia a Dia',\n  phone,\n  message\n} }];\n"
+                },
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    1680,
+                    800
+                ],
+                "id": "ai-tutor-aluno-fallback",
+                "name": "AI Tutor: Aluno Fallback"
+            },
+            {
+                "parameters": {
+                    "operation": "executeQuery",
+                    "query": "WITH module_data AS (\n  SELECT title, content_text AS syllabus, evaluation_rubric\n  FROM modules\n  WHERE course_int_id = {{ $json.course_id }}\n    AND module_number = {{ $json.current_module }}\n  LIMIT 1\n),\nrag_data AS (\n  SELECT dc.content, dc.metadata::text AS metadata\n  FROM document_chunks dc\n  JOIN modules m ON dc.module_id = m.id\n  WHERE m.course_int_id = {{ $json.course_id }}\n    AND m.module_number = {{ $json.current_module }}\n  ORDER BY dc.chunk_index ASC\n  LIMIT 5\n)\nSELECT\n  (SELECT row_to_json(md.*) FROM module_data md LIMIT 1) AS module_row,\n  (SELECT json_agg(rd.*) FROM rag_data rd) AS rag_chunks;",
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.postgres",
+                "typeVersion": 2.5,
+                "position": [
+                    1900,
+                    800
+                ],
+                "id": "ai-tutor-buscar-contexto",
+                "name": "AI Tutor: Buscar Contexto",
+                "credentials": {
+                    "postgres": {
+                        "id": "lJaeEy4CpHbhgMAp",
+                        "name": "Kreativ PostgreSQL"
+                    }
+                },
+                "continueOnFail": true
+            },
+            {
+                "parameters": {
+                    "jsCode": "// Agrega contexto e constr\u00f3i request DeepSeek\nconst std = $('AI Tutor: Aluno Fallback').first().json;\nconst histGuard = $('AI Tutor: Redis Ler Hist\u00f3rico').first().json;\nconst ctxRow = $json; // output do Combined Context Query\n\nconst phone = std.phone;\nconst userMessage = std.message;\n\n// Hist\u00f3rico\nconst historyRaw = histGuard.historyMessages || [];\nlet history = [];\ntry { history = historyRaw.map(h => JSON.parse(h)).reverse(); } catch(e) { history = []; }\n\n// Contexto do m\u00f3dulo\nconst moduleRow = ctxRow.module_row || null;\nconst ragChunks = Array.isArray(ctxRow.rag_chunks) ? ctxRow.rag_chunks : [];\nconst mod = moduleRow || { title: 'Introdu\u00e7\u00e3o', syllabus: 'Conte\u00fado em prepara\u00e7\u00e3o.', evaluation_rubric: null };\n\nlet ragContext = '';\nif (ragChunks.length > 0) {\n  ragContext = '\\n\\nMATERIAL DO M\u00d3DULO (BASE DE CONHECIMENTO):\\n' +\n    ragChunks.map((c, i) => `[${i+1}] ${c.content}`).join('\\n\\n');\n} else if (mod.syllabus) {\n  ragContext = '\\n\\nEMENTA DO M\u00d3DULO:\\n' + mod.syllabus;\n}\n\nconst systemLines = [\n  \"Voce e o Tutor IA da Kreativ Educacao. Responda em portugues, conciso e encorajador (max 3 paragrafos WhatsApp).\",\n  \"CURSO: \" + (std.course_name || \"Kreativ\") + \" | MODULO: \" + (std.current_module || 1),\n  \"ALUNO: \" + (std.name || \"Estudante\")\n];\nif (ragContext) { systemLines.push(ragContext); } else if (mod.syllabus) { systemLines.push(\"EMENTA: \" + mod.syllabus.substring(0, 800)); }\n\nconst systemPrompt = systemLines.filter(Boolean).join(\"\\n\");\nconst allMessages = [{ role: \"system\", content: systemPrompt }];\nfor (const m of history) { allMessages.push({ role: m.role, content: m.content }); }\nallMessages.push({ role: \"user\", content: userMessage || \"\" });\n\nreturn [{ json: {\n  phone,\n  userMessage,\n  dsModel: \"deepseek-chat\",\n  dsMessages: allMessages,\n  dsTemperature: 0.7,\n  dsMaxTokens: 400\n} }];\n"
+                },
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    2120,
+                    800
+                ],
+                "id": "ai-tutor-preparar-prompt",
+                "name": "AI Tutor: Preparar Prompt"
+            },
+            {
+                "parameters": {
+                    "method": "POST",
+                    "url": "https://api.deepseek.com/chat/completions",
+                    "sendHeaders": true,
+                    "headerParameters": {
+                        "parameters": [
+                            {
+                                "name": "Authorization",
+                                "value": "Bearer sk-412552782fbe4009a25a013825e6ab66"
+                            },
+                            {
+                                "name": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ]
+                    },
+                    "sendBody": true,
+                    "specifyBody": "json",
+                    "jsonBody": "={{ ({model:$json.dsModel,messages:$json.dsMessages,temperature:$json.dsTemperature,max_tokens:$json.dsMaxTokens}) }}",
+                    "options": {
+                        "response": {
+                            "response": {
+                                "responseFormat": "json"
+                            }
+                        },
+                        "timeout": 120000
+                    }
+                },
+                "type": "n8n-nodes-base.httpRequest",
+                "typeVersion": 4.2,
+                "position": [
+                    2340,
+                    800
+                ],
+                "id": "ai-tutor-deepseek",
+                "name": "AI Tutor: DeepSeek",
+                "continueOnFail": true
+            },
+            {
+                "parameters": {
+                    "jsCode": "const reqNode = $('AI Tutor: Preparar Prompt').first().json;\nconst phone = reqNode.phone;\nconst userMessage = reqNode.userMessage;\n\nlet choices;\ntry {\n  choices = $json.choices && $json.choices.length > 0\n    ? $json.choices\n    : [{ message: { content: 'Desculpe, tive um problema t\u00e9cnico. Pode repetir sua pergunta? \ud83d\udd27' } }];\n} catch(e) {\n  choices = [{ message: { content: 'Desculpe, tive um problema t\u00e9cnico. Pode repetir sua pergunta? \ud83d\udd27' } }];\n}\n\nconst aiContent = choices[0].message.content || 'Desculpe, n\u00e3o consegui processar sua mensagem.';\nreturn [{ json: { choices, phone, userMessage, aiContent } }];\n"
+                },
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    2560,
+                    800
+                ],
+                "id": "ai-tutor-extrair-resp",
+                "name": "AI Tutor: Extrair Resposta"
+            },
+            {
+                "parameters": {
+                    "jsCode": "// Redis Write History via TCP RESP protocol\nconst net = require('net');\nconst REDIS_HOST = 'kreativ_redis';\nconst REDIS_PASS = 'kNiaYOxriWOcSiZyXhb5C9LU';\nconst REDIS_PORT = 6379;\n\nconst phone = $json.phone || '';\nconst userMsg = ($json.userMessage || '').substring(0, 1500);\nconst aiMsg = ($json.choices && $json.choices[0] && $json.choices[0].message)\n  ? $json.choices[0].message.content.substring(0, 1500) : '';\n\nif (!phone) return [{ json: { error: 'no phone' } }];\n\nconst key = 'chat_history:' + phone;\nconst userEntry = JSON.stringify({ role: 'user', content: userMsg });\nconst aiEntry   = JSON.stringify({ role: 'assistant', content: aiMsg });\n\nfunction mkCmd(args) {\n  const CRLF = '\\r\\n';\n  let out = '*' + args.length + CRLF;\n  for (const a of args) {\n    const s = String(a);\n    out += '$' + Buffer.byteLength(s, 'utf8') + CRLF + s + CRLF;\n  }\n  return out;\n}\n\nreturn new Promise((resolve) => {\n  const client = new net.Socket();\n  let buf = '';\n  let done = false;\n  const okCount = { n: 0 };\n\n  const finish = (result) => {\n    if (done) return;\n    done = true;\n    try { client.destroy(); } catch(e) {}\n    resolve(result);\n  };\n\n  client.connect(REDIS_PORT, REDIS_HOST, () => {\n    client.write(mkCmd(['AUTH', REDIS_PASS]));\n    client.write(mkCmd(['LPUSH', key, userEntry]));\n    client.write(mkCmd(['LPUSH', key, aiEntry]));\n    client.write(mkCmd(['LTRIM', key, '0', '19']));\n    client.write(mkCmd(['EXPIRE', key, '86400']));\n  });\n\n  client.on('data', (data) => {\n    buf += data.toString('utf8');\n    const parts = buf.split('\\r\\n');\n    const oks = parts.filter(p => p.startsWith('+') || p.startsWith(':'));\n    okCount.n = oks.length;\n    if (oks.length >= 5) {\n      finish([{ json: { phone, key, ok: oks.length, history_written: true, aiContent: aiMsg } }]);\n    }\n  });\n\n  client.on('error', (err) => {\n    finish([{ json: { phone, key, error: err.message, aiContent: aiMsg } }]);\n  });\n\n  client.on('close', () => {\n    finish([{ json: { phone, key, ok: okCount.n, closed: true, aiContent: aiMsg } }]);\n  });\n\n  setTimeout(() => {\n    finish([{ json: { phone, key, ok: okCount.n, timeout: true, aiContent: aiMsg } }]);\n  }, 5000);\n});\n"
+                },
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    2780,
+                    800
+                ],
+                "id": "ai-tutor-redis-gravar",
+                "name": "AI Tutor: Redis Gravar Hist\u00f3rico",
+                "continueOnFail": true
+            },
+            {
+                "parameters": {
+                    "method": "POST",
+                    "url": "http://kreativ_evolution:8080/message/sendText/europs",
+                    "sendHeaders": true,
+                    "headerParameters": {
+                        "parameters": [
+                            {
+                                "name": "apikey",
+                                "value": "EXr5OuEE2sBMbRo94LtWQfofvEF1gHUM"
+                            }
+                        ]
+                    },
+                    "sendBody": true,
+                    "specifyBody": "json",
+                    "jsonBody": "={{ ({number:$('AI Tutor: Extrair Input').first().json.phone,text:$('AI Tutor: Extrair Resposta').first().json.aiContent}) }}",
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.httpRequest",
+                "typeVersion": 4.2,
+                "position": [
+                    3000,
+                    800
+                ],
+                "id": "ai-tutor-enviar-wpp",
+                "name": "AI Tutor: Enviar WhatsApp",
+                "continueOnFail": true
             }
         ],
         "connections": {
@@ -2936,7 +3421,7 @@
                     ],
                     [
                         {
-                            "node": "AI Tutor: Proxy Request",
+                            "node": "AI Tutor: Extrair Input",
                             "type": "main",
                             "index": 0
                         }
@@ -3118,17 +3603,6 @@
                 ]
             },
             "Progress: Calcular": {
-                "main": [
-                    [
-                        {
-                            "node": "Responder Typebot",
-                            "type": "main",
-                            "index": 0
-                        }
-                    ]
-                ]
-            },
-            "AI Tutor: Proxy Request": {
                 "main": [
                     [
                         {
@@ -3405,6 +3879,116 @@
                         }
                     ]
                 ]
+            },
+            "AI Tutor: Extrair Input": {
+                "main": [
+                    [
+                        {
+                            "node": "AI Tutor: Responder 200",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "AI Tutor: Responder 200": {
+                "main": [
+                    [
+                        {
+                            "node": "AI Tutor: Redis Ler Hist\u00f3rico",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "AI Tutor: Redis Ler Hist\u00f3rico": {
+                "main": [
+                    [
+                        {
+                            "node": "AI Tutor: Buscar Aluno",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "AI Tutor: Buscar Aluno": {
+                "main": [
+                    [
+                        {
+                            "node": "AI Tutor: Aluno Fallback",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "AI Tutor: Aluno Fallback": {
+                "main": [
+                    [
+                        {
+                            "node": "AI Tutor: Buscar Contexto",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "AI Tutor: Buscar Contexto": {
+                "main": [
+                    [
+                        {
+                            "node": "AI Tutor: Preparar Prompt",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "AI Tutor: Preparar Prompt": {
+                "main": [
+                    [
+                        {
+                            "node": "AI Tutor: DeepSeek",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "AI Tutor: DeepSeek": {
+                "main": [
+                    [
+                        {
+                            "node": "AI Tutor: Extrair Resposta",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "AI Tutor: Extrair Resposta": {
+                "main": [
+                    [
+                        {
+                            "node": "AI Tutor: Redis Gravar Hist\u00f3rico",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "AI Tutor: Redis Gravar Hist\u00f3rico": {
+                "main": [
+                    [
+                        {
+                            "node": "AI Tutor: Enviar WhatsApp",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
             }
         },
         "authors": "Rafael da Silva",
@@ -3413,34 +3997,34 @@
         "autosaved": false,
         "workflowPublishHistory": [
             {
-                "createdAt": "2026-02-22T11:20:53.130Z",
-                "id": 1698,
+                "createdAt": "2026-02-22T12:51:02.652Z",
+                "id": 1702,
                 "workflowId": "SoB5evP9aOmj6hLA",
-                "versionId": "0efedf94-64ee-4af9-b21a-407728518140",
+                "versionId": "e64ae300-342f-4305-a250-65c886fafc3a",
                 "event": "deactivated",
                 "userId": "d7e6ecc8-7259-4124-87c7-29a5f2d233ba"
             },
             {
-                "createdAt": "2026-02-22T11:20:53.202Z",
-                "id": 1699,
+                "createdAt": "2026-02-22T12:51:02.792Z",
+                "id": 1703,
                 "workflowId": "SoB5evP9aOmj6hLA",
-                "versionId": "0efedf94-64ee-4af9-b21a-407728518140",
+                "versionId": "e64ae300-342f-4305-a250-65c886fafc3a",
                 "event": "activated",
                 "userId": "d7e6ecc8-7259-4124-87c7-29a5f2d233ba"
             },
             {
-                "createdAt": "2026-02-22T11:20:54.693Z",
-                "id": 1700,
+                "createdAt": "2026-02-22T12:51:54.951Z",
+                "id": 1704,
                 "workflowId": "SoB5evP9aOmj6hLA",
-                "versionId": "0efedf94-64ee-4af9-b21a-407728518140",
+                "versionId": "e64ae300-342f-4305-a250-65c886fafc3a",
                 "event": "deactivated",
                 "userId": "d7e6ecc8-7259-4124-87c7-29a5f2d233ba"
             },
             {
-                "createdAt": "2026-02-22T11:20:54.719Z",
-                "id": 1701,
+                "createdAt": "2026-02-22T12:51:54.999Z",
+                "id": 1705,
                 "workflowId": "SoB5evP9aOmj6hLA",
-                "versionId": "0efedf94-64ee-4af9-b21a-407728518140",
+                "versionId": "e64ae300-342f-4305-a250-65c886fafc3a",
                 "event": "activated",
                 "userId": "d7e6ecc8-7259-4124-87c7-29a5f2d233ba"
             }
