@@ -241,45 +241,6 @@ services:
         condition: service_healthy
 
   # ===========================================================================
-  # BOT: BUILDERBOT (SUBSTITUÍDO POR TYPEBOT — mantido inativo como fallback)
-  # ===========================================================================
-
-  # builderbot:
-  #   build:
-  #     context: ./apps/builderbot
-  #     dockerfile: Dockerfile
-  #   container_name: kreativ_builderbot
-  #   restart: always
-  #   environment:
-  #     PORT: ${BUILDERBOT_PORT:-3008}
-  #     NODE_ENV: production
-  #     DB_HOST: kreativ_postgres
-  #     DB_PORT: 5432
-  #     DB_USER: ${POSTGRES_USER}
-  #     DB_PASSWORD: ${POSTGRES_PASSWORD}
-  #     DB_NAME: ${POSTGRES_DB}
-  #     EVOLUTION_API_URL: http://kreativ_evolution:8080
-  #     EVOLUTION_API_KEY: ${EVOLUTION_API_KEY}
-  #     EVOLUTION_INSTANCE: ${EVOLUTION_INSTANCE:-europs}
-  #     N8N_WEBHOOK_BASE: http://kreativ_n8n:5678/webhook
-  #     DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
-  #     DEEPSEEK_BASE_URL: https://api.deepseek.com
-  #     DEEPSEEK_MODEL: deepseek-chat
-  #     OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-  #     GEMINI_API_KEY: ${GEMINI_API_KEY:-}
-  #     CHATWOOT_URL: ${CHATWOOT_URL:-}
-  #     CHATWOOT_API_TOKEN: ${CHATWOOT_API_TOKEN:-}
-  #     CHATWOOT_ACCOUNT_ID: ${CHATWOOT_ACCOUNT_ID:-2}
-  #     CHATWOOT_INBOX_ID: ${CHATWOOT_INBOX_ID:-1}
-  #   networks:
-  #     - kreativ_net
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #     evolution-api:
-  #       condition: service_started
-
-  # ===========================================================================
   # STORAGE: MINIO
   # Console: https://files.extensionista.site
   # API S3 (interna): http://minio:9000
@@ -599,6 +560,7 @@ services:
     container_name: kreativ_portal
     restart: always
     environment:
+      HOSTNAME: "0.0.0.0"
       DB_HOST: kreativ_postgres
       DB_PORT: 5432
       DB_NAME: ${POSTGRES_DB}

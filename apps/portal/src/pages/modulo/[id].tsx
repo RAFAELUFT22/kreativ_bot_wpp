@@ -131,6 +131,48 @@ export default function ModulePage({ module: mod, prevId, nextId }: Props) {
                     </div>
                 )}
 
+                {/* PDFs: botão de download + visualizador embed */}
+                {mediaUrls
+                    .filter((u: string) => u.toLowerCase().endsWith('.pdf'))
+                    .map((u: string) => (
+                        <div key={u} style={{ marginBottom: '24px' }}>
+                            <a
+                                href={u}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="btn btn-outline"
+                                style={{ marginBottom: '12px', display: 'inline-block' }}
+                            >
+                                📄 Baixar Apostila (PDF)
+                            </a>
+                            <embed
+                                src={u}
+                                type="application/pdf"
+                                width="100%"
+                                height="700px"
+                                style={{ borderRadius: 'var(--radius)', border: '1px solid var(--border)', display: 'block' }}
+                            />
+                        </div>
+                    ))}
+
+                {/* Imagens */}
+                {mediaUrls
+                    .filter((u: string) => /\.(jpg|jpeg|png|webp|gif)$/i.test(u))
+                    .map((u: string) => (
+                        <img
+                            key={u}
+                            src={u}
+                            alt="Material do módulo"
+                            style={{
+                                width: '100%',
+                                borderRadius: 'var(--radius)',
+                                border: '1px solid var(--border)',
+                                marginBottom: '16px',
+                                display: 'block',
+                            }}
+                        />
+                    ))}
+
                 <div className="module-body">
                     {mod.content_text ? (
                         <div className="markdown-content">
