@@ -4,9 +4,9 @@
 ---
 
 ## 🗓️ Última Atualização
-**Data:** 2026-02-22 (v0.3.6)
-**Versão:** v0.3 — Gestão de Alunos Admin & Estabilidade AI
-**Repo:** https://github.com/RAFAELUFT212/kreativ_bot_v2.git
+**Data:** 2026-02-22 (v0.4.0)
+**Versão:** v0.4 — N8N Async + ToolJet/Metabase Planejados
+**Repo:** https://github.com/RAFAELUFT22/kreativ_bot_v2.git
 **VPS:** extensionista.site (Hostinger, 7.8GB RAM, 1 vCPU, 48GB disco)
 
 ---
@@ -44,15 +44,26 @@ PostgreSQL kreativ_edu
 Typebot → mensagens de texto → Evolution API → WhatsApp
 ```
 
-### 🛠️ Gestão de Alunos (Admin) — v0.3.6
-- **Painel ToolJet**: Blueprint criado para gestão manual de alunos via `admin.extensionista.site`.
-- **API Administrativa**: Novas ações `admin_upsert_student` e `admin_reset_student` implementadas no n8n.
-- **Resumo**: Equipe interna agora pode matricular, editar e resetar progresso de alunos sem acesso direto ao DB.
+### 🚀 N8N Async — v0.4.0 (2026-02-22)
+Os 3 paths de IA do ULTIMATE foram modernizados para resposta assíncrona via `respondToWebhook` + Evolution direct send:
 
-### AI Tutor Sync (v3)
-- O Tutor agora responde de forma **síncrona** ao Typebot.
-- Fluxo: Typebot → Router → AI Tutor Workflow → Respond to Webhook → Router → Typebot.
-- Isso elimina o loop de "aguarde" no WhatsApp e garante que a resposta do chat real apareça no balão do Typebot.
+| Action | Latência antes | Latência depois | Padrão |
+|---|---|---|---|
+| `ai_tutor` | 5-30s (bloqueava Typebot) | **0.53s** ✅ | respondToWebhook → DeepSeek inline → Evolution |
+| `submit_quiz` | 5-30s (bloqueava Typebot) | **0.49s** ✅ | respondToWebhook → DeepSeek → PostgreSQL → Evolution |
+| `get_module` | 5-15s (bloqueava Typebot) | **0.37s** ✅ | PostgreSQL → respondToWebhook(title+content) → DeepSeek → Evolution |
+
+Aluno recebe resposta imediata do bot ("Analisando...") e depois recebe a resposta da IA diretamente no WhatsApp.
+
+### 🛠️ Gestão de Alunos (Admin) — v0.3.6
+- **Painel ToolJet**: Design e plano de implementação criados. App "Kreativ Admin" (3 abas: Conteúdo, Alunos, Admin) pronto para configuração.
+- **API Administrativa**: Ações `admin_upsert_student` e `admin_reset_student` implementadas no N8N.
+- **Metabase**: Design de dashboard "Kreativ — Visão Operacional" (5 cards KPI) criado. Aguardando implementação.
+
+### AI Tutor RAG (v3)
+- Busca semântica ativa via `document_chunks` + pgvector.
+- Contexto do módulo + top 5 chunks injetados no prompt do DeepSeek.
+- `scripts/ingest_embeddings.py` disponível para popular novos conteúdos.
 
 ### Bot Typebot (ID: vnp6x9bqwrx54b2pct5dhqlb)
 - **Slug:** kreativ-educacao
@@ -60,10 +71,11 @@ Typebot → mensagens de texto → Evolution API → WhatsApp
 - **11 grupos:** Start → Catraca → Menu → Módulo → Quiz → Quiz-Fail → Progresso → Tutor Humano → AI Tutor → Certificado → Modo Humano
 - **Variáveis pré-preenchidas pelo Evolution:** `remoteJid`, `pushName`, `instanceName`, `serverUrl`
 
-### N8N — Unified API (Workflow ID: tOGGjrzk3ZImsK81)
+### N8N — Unified API ULTIMATE (Workflow ID: SoB5evP9aOmj6hLA)
 - **Webhook path:** `kreativ-unified-api`
-- **Actions suportados:** `check_student`, `get_module`, `submit_quiz`, `get_progress`, `request_human`, `ai_tutor`, `emit_certificate`
-- **Arquivo:** `n8n-workflows/60-kreativ-api.json`
+- **Actions suportados:** `check_student`, `get_module`, `submit_quiz`, `get_progress`, `request_human`, `ai_tutor`, `emit_certificate`, `admin_upsert_student`, `admin_reset_student`, `admin_upsert_course`, `admin_upsert_module`
+- **Arquivo:** `n8n-workflows/60-kreativ-api-ultimate.json`
+- **Status:** Ativo com 3 paths async (ai_tutor, submit_quiz, get_module). Pending: Task 6 build_typebot.py + Task 7 smoke test final.
 
 ### Banco de Dados (kreativ_edu)
 | Tabela | Registros |
@@ -156,12 +168,19 @@ title: Opções
 | `n8n-workflows/08-inatividade.json` | FDkc4gh7kp6hKZ3E | Lembrete inatividade |
 | `n8n-workflows/09-relatorio-semanal.json` | HCnfOkbtviheBGBk | Relatório semanal |
 
+### N8N Workflows Ativos (CORRETO — v0.4.0)
+| Arquivo | ID N8N | Propósito |
+|---------|--------|-----------|
+| `n8n-workflows/60-kreativ-api-ultimate.json` | `SoB5evP9aOmj6hLA` | **Unified API ULTIMATE** (principal, async) |
+| `n8n-workflows/10-whatsapp-router-active.json` | `a0RywHWeY5kfgzGT` | WhatsApp Router |
+| `n8n-workflows/20-ai-router-v3-redis-rag.json` | `5caL67H387euTxan` | AI Sub-workflow V3 (RAG) |
+| `n8n-workflows/10-chatwoot-retomar-bot.json` | `y92mEtPP4nK1p037` | Chatwoot → Retomar Bot |
+| `n8n-workflows/20-ai-tutor-v2-patched.json` | `a0RywHWeY5kfgzGT` | AI Adaptive Router |
+
 ### Arquivos DEPRECATED (não usar, manter apenas para referência)
-- `n8n-workflows/ADMIN-*.json` — versões antigas do router
-- `n8n-workflows/fixed_router*.json` — tentativas de debug
-- `n8n-workflows/temp_update.json` — temporário
+- Qualquer `n8n-workflows/` não listado acima
 - `scripts/*.js` — scripts de teste/debug das sessões anteriores
-- `*.sql` (raiz) — SQLs de fix aplicados, não necessários mais
+- `*.sql` (raiz) — SQLs de fix já aplicados
 
 ---
 
@@ -172,7 +191,7 @@ title: Opções
 | Typebot API Key | `LqkFiNhRjg1p2W3nNkgLpxPM` | Para scripts |
 | Typebot Bot ID | `vnp6x9bqwrx54b2pct5dhqlb` | Bot principal |
 | Typebot Pub ID | `cmlvjfr7v000ipc1giknwf999` | PublicTypebot |
-| N8N Workflow ID | `tOGGjrzk3ZImsK81` | Unified API |
+| N8N Workflow ID ULTIMATE | `SoB5evP9aOmj6hLA` | Unified API (atual) |
 | Evolution Instance | `europs` | WhatsApp instance |
 | Chatwoot Account | `2` | Account ID |
 | Chatwoot Inbox | `1` | WhatsApp inbox |
@@ -182,37 +201,28 @@ title: Opções
 
 ## 🛣️ Roadmap de Próximas Etapas
 
-### Fase 3A — Corrigir UX WhatsApp (Imediato, verificar se ja nao fez)
-- [ ] **TAREFA 1:** Substituir Choice Input blocks no Typebot por blocos de texto com sintaxe `[buttons]` para Evolution API — max 3 botões por mensagem
-- [ ] **TAREFA 2:** Para menu principal (4 opções), usar `[list]` ou dividir em 2 mensagens
-- [ ] **TAREFA 3:** Reescrever `scripts/build_typebot.py` com `tx()` helper suportando sintaxe de botões
-- [ ] **TAREFA 4:** Testar renderização de botões no WhatsApp real
+### Pendentes IMEDIATOS (sessão atual)
+- [ ] **Task 6:** Atualizar `scripts/build_typebot.py` — remover `responseVariableMapping` do `ai_tutor` e simplificar `submit_quiz` + `get_module` (plano: `docs/plans/2026-02-22-n8n-async-impl.md`)
+- [ ] **Task 7:** Smoke test final + exportar `60-kreativ-api-ultimate.json` + push
 
-### Fase 3B — Completar N8N Unified API (1-2 dias)
-- [ ] **TAREFA 5:** Implementar `submit_quiz` com avaliação real via DeepSeek:
-  - 3 perguntas discursivas → prompt para DeepSeek → score + feedback + passed
-  - Salvar resultado em tabela `quiz_results`
-- [ ] **TAREFA 6:** Corrigir `get_progress` com telefone normalizado
-- [ ] **TAREFA 7:** Implementar `ai_tutor` com RAG (busca em `document_chunks`)
-- [ ] **TAREFA 8:** Implementar `emit_certificate` com PDF via MinIO
+### Fase 4A — ToolJet + Metabase (Próxima sessão)
+Plano detalhado: `docs/plans/2026-02-22-tooljet-metabase-impl.md`
+- [ ] **TAREFA 1:** Migration SQL `ai_usage_log` (1 comando docker exec)
+- [ ] **TAREFA 2-5:** Metabase: 5 cards KPI no dashboard "Kreativ — Visão Operacional"
+- [ ] **TAREFA 6-11:** ToolJet: App "Kreativ Admin" (3 abas, 7 queries, RBAC grupos)
+- [ ] **TAREFA 12:** N8N: nó "AI Tutor: Log Usage" no ULTIMATE (após Task 6 acima)
+- [ ] **TAREFA 13:** Smoke tests end-to-end
 
-### Fase 3C — Migrar para WhatsApp Cloud API (Opcional, ja usamos a api oficial mas estamos conectados na evolution api)
-- [x ] **TAREFA 9:** Criar App Meta Business + número oficial
-- [x ] **TAREFA 10:** Criar nova instância Evolution com `integration: WHATSAPP-BUSINESS`
-- [x ] **TAREFA 11:** Configurar webhook `POST /webhook/meta` com token permanente
-- [ x] **TAREFA 12:** Testar botões interativos nativos do WhatsApp Business API
+### Fase 4B — RAG: Ingestão de Conteúdo
+- [ ] Executar `scripts/ingest_embeddings.py` para popular `document_chunks` (tabela existe, `ai_tutor` já faz busca vetorial)
 
-### Fase 4 — RAG e Conteúdo (Avançado)
-- [ ] **TAREFA 13:** Popular `document_chunks` com embeddings dos módulos
-- [ ] **TAREFA 14:** Ativar busca semântica no `ai_tutor`
-- [ ] **TAREFA 15:** Criar fluxo de ingestão de PDFs via MinIO
+### Fase 4C — Dívida Técnica N8N (Baixa prioridade)
+- [ ] Migrar `ai_tutor` para AI Agent nativo + Window Buffer Memory (plano: `docs/plans/2026-02-22-n8n-async-redesign.md`) — melhoria de UX, não blocker
 
 ### Fase 5 — Produto Final
-- [ ] **TAREFA 16:** Onboarding de novos alunos (cadastro via WhatsApp)
-- [ ] **TAREFA 17:** Portal do aluno funcional com certificados
-- [ ] **TAREFA 18:** Dashboard Metabase com KPIs
-- [ ] **TAREFA 19:** Painel admin ToolJet para gestão de cursos
-- [ ] **TAREFA 20:** Deploy em número WhatsApp produção (testar mensagens apenas com o numero 556399374156)
+- [ ] Onboarding de novos alunos (cadastro via WhatsApp)
+- [ ] Portal do aluno funcional com certificados PDF
+- [ ] Deploy em número WhatsApp produção
 
 ---
 
@@ -240,9 +250,16 @@ curl -s -X POST "https://bot.extensionista.site/api/v1/typebots/kreativ-educacao
 
 ### Testar N8N Unified API
 ```bash
-curl -s -X POST "https://n8n.extensionista.site/webhook/kreativ-unified-api" 
-  -H "Content-Type: application/json" 
+curl -s -X POST "https://n8n.extensionista.site/webhook/kreativ-unified-api" \
+  -H "Content-Type: application/json" \
   -d '{"action":"check_student","phone":"556399374165@s.whatsapp.net"}'
+```
+
+### Verificar latência async (deve retornar em < 1s)
+```bash
+time curl -s -X POST "https://n8n.extensionista.site/webhook/kreativ-unified-api" \
+  -H "Content-Type: application/json" \
+  -d '{"action":"ai_tutor","phone":"556399374165","message":"Olá"}'
 ```
 
 ### Resetar sessões Typebot travadas
