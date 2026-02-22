@@ -1,5 +1,5 @@
 {
-    "updatedAt": "2026-02-22T12:57:42.728Z",
+    "updatedAt": "2026-02-22T13:02:26.803Z",
     "createdAt": "2026-02-21T21:18:29.584Z",
     "id": "SoB5evP9aOmj6hLA",
     "name": "Kreativ: Unified API Router (v1.1 - ULTIMATE)",
@@ -1382,6 +1382,49 @@
             "id": "quiz-enviar-wpp",
             "name": "Quiz: Enviar WhatsApp",
             "continueOnFail": true
+        },
+        {
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={{ JSON.stringify({ ok: true, title: $json.title || '', content: $json.content_text || $json.description || '', module_number: $json.module_number || 0, total_modules: $json.total_modules || 1, passing_score: $json.passing_score || 70, response: 'Quiz sendo gerado... \ud83d\udcda'}) }}",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1,
+            "position": [
+                950,
+                108
+            ],
+            "id": "module-responder-200",
+            "name": "Module: Responder 200"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://kreativ_evolution:8080/message/sendText/europs",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "apikey",
+                            "value": "EXr5OuEE2sBMbRo94LtWQfofvEF1gHUM"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ ({number: $('Normalizar Input').first().json.phone,text: '\ud83d\udcdd *Quiz: ' + ($json.title || 'M\u00f3dulo') + '*\\n\\n' + '\u2753 Pergunta 1:\\n' + ($json.question_1 || 'O que voc\u00ea aprendeu de mais importante neste m\u00f3dulo?') + '\\n\\n' + '\u2753 Pergunta 2:\\n' + ($json.question_2 || 'Como voc\u00ea aplicaria este conhecimento na pr\u00e1tica?') + '\\n\\n' + '\u2753 Pergunta 3:\\n' + ($json.question_3 || 'Quais d\u00favidas ainda restam sobre o conte\u00fado?') + '\\n\\n' + '\ud83d\udca1 Responda com /responder [n\u00famero] [sua resposta]'}) }}",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                1692,
+                208
+            ],
+            "id": "module-enviar-quiz",
+            "name": "Module: Enviar Quiz",
+            "continueOnFail": true
         }
     ],
     "connections": {
@@ -1583,7 +1626,7 @@
             "main": [
                 [
                     {
-                        "node": "Module: Prompt AI Quiz",
+                        "node": "Module: Responder 200",
                         "type": "main",
                         "index": 0
                     }
@@ -1616,7 +1659,7 @@
             "main": [
                 [
                     {
-                        "node": "Responder Typebot",
+                        "node": "Module: Enviar Quiz",
                         "type": "main",
                         "index": 0
                     }
@@ -2032,6 +2075,17 @@
                     }
                 ]
             ]
+        },
+        "Module: Responder 200": {
+            "main": [
+                [
+                    {
+                        "node": "Module: Prompt AI Quiz",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
         }
     },
     "settings": {
@@ -2042,9 +2096,9 @@
     "staticData": null,
     "meta": null,
     "pinData": {},
-    "versionId": "5bd49343-10e9-4493-8fc5-9758da833bdb",
-    "activeVersionId": "5bd49343-10e9-4493-8fc5-9758da833bdb",
-    "versionCounter": 110,
+    "versionId": "a500765f-582e-4af3-8ee5-cd08786bd437",
+    "activeVersionId": "a500765f-582e-4af3-8ee5-cd08786bd437",
+    "versionCounter": 115,
     "triggerCount": 1,
     "shared": [
         {
@@ -2067,9 +2121,9 @@
     ],
     "tags": [],
     "activeVersion": {
-        "updatedAt": "2026-02-22T12:57:42.732Z",
-        "createdAt": "2026-02-22T12:57:42.732Z",
-        "versionId": "5bd49343-10e9-4493-8fc5-9758da833bdb",
+        "updatedAt": "2026-02-22T13:02:26.816Z",
+        "createdAt": "2026-02-22T13:02:26.816Z",
+        "versionId": "a500765f-582e-4af3-8ee5-cd08786bd437",
         "workflowId": "SoB5evP9aOmj6hLA",
         "nodes": [
             {
@@ -3447,6 +3501,49 @@
                 "id": "quiz-enviar-wpp",
                 "name": "Quiz: Enviar WhatsApp",
                 "continueOnFail": true
+            },
+            {
+                "parameters": {
+                    "respondWith": "json",
+                    "responseBody": "={{ JSON.stringify({ ok: true, title: $json.title || '', content: $json.content_text || $json.description || '', module_number: $json.module_number || 0, total_modules: $json.total_modules || 1, passing_score: $json.passing_score || 70, response: 'Quiz sendo gerado... \ud83d\udcda'}) }}",
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.respondToWebhook",
+                "typeVersion": 1,
+                "position": [
+                    950,
+                    108
+                ],
+                "id": "module-responder-200",
+                "name": "Module: Responder 200"
+            },
+            {
+                "parameters": {
+                    "method": "POST",
+                    "url": "http://kreativ_evolution:8080/message/sendText/europs",
+                    "sendHeaders": true,
+                    "headerParameters": {
+                        "parameters": [
+                            {
+                                "name": "apikey",
+                                "value": "EXr5OuEE2sBMbRo94LtWQfofvEF1gHUM"
+                            }
+                        ]
+                    },
+                    "sendBody": true,
+                    "specifyBody": "json",
+                    "jsonBody": "={{ ({number: $('Normalizar Input').first().json.phone,text: '\ud83d\udcdd *Quiz: ' + ($json.title || 'M\u00f3dulo') + '*\\n\\n' + '\u2753 Pergunta 1:\\n' + ($json.question_1 || 'O que voc\u00ea aprendeu de mais importante neste m\u00f3dulo?') + '\\n\\n' + '\u2753 Pergunta 2:\\n' + ($json.question_2 || 'Como voc\u00ea aplicaria este conhecimento na pr\u00e1tica?') + '\\n\\n' + '\u2753 Pergunta 3:\\n' + ($json.question_3 || 'Quais d\u00favidas ainda restam sobre o conte\u00fado?') + '\\n\\n' + '\ud83d\udca1 Responda com /responder [n\u00famero] [sua resposta]'}) }}",
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.httpRequest",
+                "typeVersion": 4.2,
+                "position": [
+                    1692,
+                    208
+                ],
+                "id": "module-enviar-quiz",
+                "name": "Module: Enviar Quiz",
+                "continueOnFail": true
             }
         ],
         "connections": {
@@ -3648,7 +3745,7 @@
                 "main": [
                     [
                         {
-                            "node": "Module: Prompt AI Quiz",
+                            "node": "Module: Responder 200",
                             "type": "main",
                             "index": 0
                         }
@@ -3681,7 +3778,7 @@
                 "main": [
                     [
                         {
-                            "node": "Responder Typebot",
+                            "node": "Module: Enviar Quiz",
                             "type": "main",
                             "index": 0
                         }
@@ -4097,6 +4194,17 @@
                         }
                     ]
                 ]
+            },
+            "Module: Responder 200": {
+                "main": [
+                    [
+                        {
+                            "node": "Module: Prompt AI Quiz",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
             }
         },
         "authors": "Rafael da Silva",
@@ -4105,34 +4213,34 @@
         "autosaved": false,
         "workflowPublishHistory": [
             {
-                "createdAt": "2026-02-22T12:57:43.096Z",
-                "id": 1706,
+                "createdAt": "2026-02-22T13:02:26.995Z",
+                "id": 1710,
                 "workflowId": "SoB5evP9aOmj6hLA",
-                "versionId": "5bd49343-10e9-4493-8fc5-9758da833bdb",
+                "versionId": "a500765f-582e-4af3-8ee5-cd08786bd437",
                 "event": "deactivated",
                 "userId": "d7e6ecc8-7259-4124-87c7-29a5f2d233ba"
             },
             {
-                "createdAt": "2026-02-22T12:57:43.534Z",
-                "id": 1707,
+                "createdAt": "2026-02-22T13:02:27.046Z",
+                "id": 1711,
                 "workflowId": "SoB5evP9aOmj6hLA",
-                "versionId": "5bd49343-10e9-4493-8fc5-9758da833bdb",
+                "versionId": "a500765f-582e-4af3-8ee5-cd08786bd437",
                 "event": "activated",
                 "userId": "d7e6ecc8-7259-4124-87c7-29a5f2d233ba"
             },
             {
-                "createdAt": "2026-02-22T12:57:43.781Z",
-                "id": 1708,
+                "createdAt": "2026-02-22T13:02:27.316Z",
+                "id": 1712,
                 "workflowId": "SoB5evP9aOmj6hLA",
-                "versionId": "5bd49343-10e9-4493-8fc5-9758da833bdb",
+                "versionId": "a500765f-582e-4af3-8ee5-cd08786bd437",
                 "event": "deactivated",
                 "userId": "d7e6ecc8-7259-4124-87c7-29a5f2d233ba"
             },
             {
-                "createdAt": "2026-02-22T12:57:43.823Z",
-                "id": 1709,
+                "createdAt": "2026-02-22T13:02:27.342Z",
+                "id": 1713,
                 "workflowId": "SoB5evP9aOmj6hLA",
-                "versionId": "5bd49343-10e9-4493-8fc5-9758da833bdb",
+                "versionId": "a500765f-582e-4af3-8ee5-cd08786bd437",
                 "event": "activated",
                 "userId": "d7e6ecc8-7259-4124-87c7-29a5f2d233ba"
             }
