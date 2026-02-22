@@ -1,5 +1,5 @@
 {
-    "updatedAt": "2026-02-22T03:34:42.528Z",
+    "updatedAt": "2026-02-22T11:15:14.669Z",
     "createdAt": "2026-02-19T20:30:05.110Z",
     "id": "5caL67H387euTxan",
     "name": "Kreativ: AI Adaptive Router V3 (Redis Memory + RAG)",
@@ -25,7 +25,7 @@
         },
         {
             "parameters": {
-                "jsCode": "const input = $json.body || $json;\nreturn [{\n  json: {\n    phone: input.phone || 'no-phone',\n    body: input.body || 'Oi',\n    timestamp: new Date().toISOString()\n  }\n}];"
+                "jsCode": "// Suporta tanto chamadas via Webhook como via executeWorkflow\nlet phone, message;\n\nif ($json.phone) {\n  // Modo executeWorkflow: $json = { phone, body }\n  phone = String($json.phone).replace(/\\D/g, '');\n  message = typeof $json.body === 'string' ? $json.body : 'Oi';\n} else if ($json.body && typeof $json.body === 'object') {\n  // Modo Webhook: $json = { body: { phone, ... } }\n  const b = $json.body;\n  phone = String(b.phone || b.phone_number || '').replace(/\\D/g, '');\n  message = b.body || b.message || 'Oi';\n} else {\n  phone = 'no-phone';\n  message = 'Oi';\n}\n\nreturn [{ json: {\n  phone: phone || 'no-phone',\n  body: message,\n  timestamp: new Date().toISOString()\n} }];"
             },
             "id": "transformer",
             "name": "Transformer",
@@ -229,15 +229,25 @@
         },
         {
             "parameters": {
-                "respondWith": "json",
-                "responseBody": "={{ JSON.stringify({ response: .aiContent }) }}"
+                "jsCode": "// Formata a resposta para o ULTIMATE (ou para chamadas diretas)\nconst r = $json;\nconst aiResponse = r.response || r.aiContent || r.choices?.[0]?.message?.content || '';\n\nreturn [{ json: {\n  ok: true,\n  response: aiResponse,\n  phone: r.phone || ''\n} }];"
             },
             "id": "respond-to-router",
             "name": "Respond to Router",
-            "type": "n8n-nodes-base.respondToWebhook",
-            "typeVersion": 1,
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
             "position": [
                 3200,
+                304
+            ]
+        },
+        {
+            "parameters": {},
+            "id": "execute-workflow-trigger",
+            "name": "Execute Workflow Trigger",
+            "type": "n8n-nodes-base.executeWorkflowTrigger",
+            "typeVersion": 1,
+            "position": [
+                -200,
                 304
             ]
         }
@@ -368,6 +378,17 @@
                     }
                 ]
             ]
+        },
+        "Execute Workflow Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Transformer",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
         }
     },
     "settings": {
@@ -379,9 +400,9 @@
     "staticData": null,
     "meta": null,
     "pinData": {},
-    "versionId": "b542adc7-48d1-42ab-b451-8f171d774124",
-    "activeVersionId": "b542adc7-48d1-42ab-b451-8f171d774124",
-    "versionCounter": 239,
+    "versionId": "d35c55fd-c0cf-417f-8c15-6edb6f3d251e",
+    "activeVersionId": "d35c55fd-c0cf-417f-8c15-6edb6f3d251e",
+    "versionCounter": 340,
     "triggerCount": 1,
     "shared": [
         {
@@ -404,9 +425,9 @@
     ],
     "tags": [],
     "activeVersion": {
-        "updatedAt": "2026-02-21T22:51:53.141Z",
-        "createdAt": "2026-02-21T22:51:53.141Z",
-        "versionId": "b542adc7-48d1-42ab-b451-8f171d774124",
+        "updatedAt": "2026-02-22T11:15:14.673Z",
+        "createdAt": "2026-02-22T11:15:14.673Z",
+        "versionId": "d35c55fd-c0cf-417f-8c15-6edb6f3d251e",
         "workflowId": "5caL67H387euTxan",
         "nodes": [
             {
@@ -427,7 +448,7 @@
             },
             {
                 "parameters": {
-                    "jsCode": "const input = $json.body || $json;\nreturn [{\n  json: {\n    phone: input.phone || 'no-phone',\n    body: input.body || 'Oi',\n    timestamp: new Date().toISOString()\n  }\n}];"
+                    "jsCode": "// Suporta tanto chamadas via Webhook como via executeWorkflow\nlet phone, message;\n\nif ($json.phone) {\n  // Modo executeWorkflow: $json = { phone, body }\n  phone = String($json.phone).replace(/\\D/g, '');\n  message = typeof $json.body === 'string' ? $json.body : 'Oi';\n} else if ($json.body && typeof $json.body === 'object') {\n  // Modo Webhook: $json = { body: { phone, ... } }\n  const b = $json.body;\n  phone = String(b.phone || b.phone_number || '').replace(/\\D/g, '');\n  message = b.body || b.message || 'Oi';\n} else {\n  phone = 'no-phone';\n  message = 'Oi';\n}\n\nreturn [{ json: {\n  phone: phone || 'no-phone',\n  body: message,\n  timestamp: new Date().toISOString()\n} }];"
                 },
                 "id": "transformer",
                 "name": "Transformer",
@@ -631,15 +652,25 @@
             },
             {
                 "parameters": {
-                    "respondWith": "json",
-                    "responseBody": "={{ JSON.stringify({ response: .aiContent }) }}"
+                    "jsCode": "// Formata a resposta para o ULTIMATE (ou para chamadas diretas)\nconst r = $json;\nconst aiResponse = r.response || r.aiContent || r.choices?.[0]?.message?.content || '';\n\nreturn [{ json: {\n  ok: true,\n  response: aiResponse,\n  phone: r.phone || ''\n} }];"
                 },
                 "id": "respond-to-router",
                 "name": "Respond to Router",
-                "type": "n8n-nodes-base.respondToWebhook",
-                "typeVersion": 1,
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
                 "position": [
                     3200,
+                    304
+                ]
+            },
+            {
+                "parameters": {},
+                "id": "execute-workflow-trigger",
+                "name": "Execute Workflow Trigger",
+                "type": "n8n-nodes-base.executeWorkflowTrigger",
+                "typeVersion": 1,
+                "position": [
+                    -200,
                     304
                 ]
             }
@@ -770,6 +801,17 @@
                         }
                     ]
                 ]
+            },
+            "Execute Workflow Trigger": {
+                "main": [
+                    [
+                        {
+                            "node": "Transformer",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
             }
         },
         "authors": "Rafael da Silva",
@@ -778,26 +820,34 @@
         "autosaved": false,
         "workflowPublishHistory": [
             {
-                "createdAt": "2026-02-21T22:51:53.507Z",
-                "id": 1523,
+                "createdAt": "2026-02-22T11:15:15.973Z",
+                "id": 1696,
                 "workflowId": "5caL67H387euTxan",
-                "versionId": "b542adc7-48d1-42ab-b451-8f171d774124",
-                "event": "activated",
-                "userId": "d7e6ecc8-7259-4124-87c7-29a5f2d233ba"
-            },
-            {
-                "createdAt": "2026-02-22T03:34:42.588Z",
-                "id": 1538,
-                "workflowId": "5caL67H387euTxan",
-                "versionId": "b542adc7-48d1-42ab-b451-8f171d774124",
+                "versionId": "d35c55fd-c0cf-417f-8c15-6edb6f3d251e",
                 "event": "deactivated",
                 "userId": "d7e6ecc8-7259-4124-87c7-29a5f2d233ba"
             },
             {
-                "createdAt": "2026-02-22T03:34:42.604Z",
-                "id": 1539,
+                "createdAt": "2026-02-22T11:15:15.992Z",
+                "id": 1697,
                 "workflowId": "5caL67H387euTxan",
-                "versionId": "b542adc7-48d1-42ab-b451-8f171d774124",
+                "versionId": "d35c55fd-c0cf-417f-8c15-6edb6f3d251e",
+                "event": "activated",
+                "userId": "d7e6ecc8-7259-4124-87c7-29a5f2d233ba"
+            },
+            {
+                "createdAt": "2026-02-22T11:15:14.780Z",
+                "id": 1694,
+                "workflowId": "5caL67H387euTxan",
+                "versionId": "d35c55fd-c0cf-417f-8c15-6edb6f3d251e",
+                "event": "deactivated",
+                "userId": "d7e6ecc8-7259-4124-87c7-29a5f2d233ba"
+            },
+            {
+                "createdAt": "2026-02-22T11:15:14.822Z",
+                "id": 1695,
+                "workflowId": "5caL67H387euTxan",
+                "versionId": "d35c55fd-c0cf-417f-8c15-6edb6f3d251e",
                 "event": "activated",
                 "userId": "d7e6ecc8-7259-4124-87c7-29a5f2d233ba"
             }
