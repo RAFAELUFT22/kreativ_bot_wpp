@@ -273,16 +273,13 @@ groups.append(group("g3", "Módulo", 900, -400, [
     tx("b_g3_load", "📥 Carregando módulo, aguarde..."),
     wb("b_g3_get", "get_module", {"module_number": "{{current_module}}"}, {
         "module_title":   "title",
-        "module_content": "content_text",
-        "question_1":     "question_1",
-        "question_2":     "question_2",
-        "question_3":     "question_3",
+        "module_content": "content",    # async: só title+content retornam síncronos
     }),
     tx("b_g3_title", "📖 *{{module_title}}*"),
     tx("b_g3_body",  "{{module_content}}"),
-    tx("b_g3_q1",    "❓ *Pergunta 1:*\n{{question_1}}", "e_g3_g4"),
+    tx("b_g3_quiz_wpp", "📝 *Quiz chegando!*\nAs perguntas serão enviadas nesta conversa em instantes. Aguarde! 📱", "e_g3_g2"),
 ]))
-edges.append(edge("e_g3_g4", "b_g3_q1", "g4"))
+edges.append(edge("e_g3_g2", "b_g3_quiz_wpp", "g2"))
 
 # ── g4: Quiz — coleta 3 respostas + submete + avalia ─────────────────────────
 groups.append(group("g4", "Quiz", 1300, -400, [
@@ -291,26 +288,16 @@ groups.append(group("g4", "Quiz", 1300, -400, [
     inp("b_g4_a2", V["answer_2"], "Sua resposta para a P2...", "Responder"),
     tx("b_g4_q3",  "❓ *Pergunta 3:*\n{{question_3}}"),
     inp("b_g4_a3", V["answer_3"], "Sua resposta para a P3...", "Enviar respostas"),
-    tx("b_g4_eval", "🤔 Avaliando com IA, aguarde..."),
+    tx("b_g4_eval", "🤔 Enviando respostas..."),
     wb("b_g4_submit", "submit_quiz", {
         "module_number": "{{current_module}}",
         "question_1": "{{question_1}}", "answer_1": "{{answer_1}}",
         "question_2": "{{question_2}}", "answer_2": "{{answer_2}}",
         "question_3": "{{question_3}}", "answer_3": "{{answer_3}}",
-    }, {
-        "quiz_passed":    "passed",
-        "quiz_score":     "score",
-        "quiz_feedback":  "feedback",
-        "next_module":    "next_module",
-        "is_last_module": "is_last_module",
-    }),
-    cond("b_g4_cond", V["quiz_passed"], "true",
-         "i_g4_passed", "e_g4_passed", "e_g4_failed"),
+    }, {}),   # async: resultado chega via WhatsApp direto
+    tx("b_g4_result", "✅ Respostas enviadas!\n\nO resultado da avaliação chegará nesta conversa em instantes. 📱", "e_g4_g2"),
 ]))
-edges += [
-    edge("e_g4_passed", "b_g4_cond", "g8",      "i_g4_passed"),
-    edge("e_g4_failed", "b_g4_cond", "g4_fail"),
-]
+edges.append(edge("e_g4_g2", "b_g4_result", "g2"))
 
 # ── g4_fail: Quiz reprovado — feedback + voltar menu ─────────────────────────
 groups.append(group("g4_fail", "Quiz — Reprovado", 1600, -200, [
@@ -345,10 +332,8 @@ groups.append(group("g6", "Tutor Humano", 900, 400, [
 groups.append(group("g7", "Tutor IA", 900, 800, [
     tx("b_g7_lbl", "🤖 *Tutor IA — Kreativ*\nQual é sua dúvida sobre o conteúdo?"),
     inp("b_g7_ask", V["tutor_question"], "Sua pergunta...", "Perguntar"),
-    wb("b_g7_req", "ai_tutor", {"message": "{{tutor_question}}"}, {
-        "ai_response": "response",
-    }),
-    tx("b_g7_resp", "🤖 {{ai_response}}", "e_g7_g2"),
+    wb("b_g7_req", "ai_tutor", {"message": "{{tutor_question}}"}, {}),  # async: resposta via WhatsApp
+    tx("b_g7_resp", "Seu tutor responderá em instantes! 📱\n(A resposta chegará nesta conversa)", "e_g7_g2"),
 ]))
 edges.append(edge("e_g7_g2", "b_g7_resp", "g2"))
 
