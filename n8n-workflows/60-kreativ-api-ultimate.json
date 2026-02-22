@@ -1,5 +1,5 @@
 {
-    "updatedAt": "2026-02-22T04:16:51.894Z",
+    "updatedAt": "2026-02-22T11:20:52.908Z",
     "createdAt": "2026-02-21T21:18:29.584Z",
     "id": "SoB5evP9aOmj6hLA",
     "name": "Kreativ: Unified API Router (v1.1 - ULTIMATE)",
@@ -523,7 +523,7 @@
         },
         {
             "parameters": {
-                "jsCode": "const row = $json;\nif (!row.name) return [{ json: { error: 'Aluno n\u00e3o encontrado' } }];\n\nconst completed = Array.isArray(row.completed_modules) ? row.completed_modules.length : 0;\nconst total = row.total_modules || 1;\nconst pct = Math.round((completed / total) * 100);\n\nreturn [{ json: {\n  ...row,\n  completed_modules: completed,\n  completion_pct: pct\n} }];"
+                "jsCode": "const row = $json;\nif (!row.phone) return [{ json: { error: 'Aluno n\u00e3o encontrado' } }];\n\nconst completed = Array.isArray(row.completed_modules) ? row.completed_modules.length : 0;\nconst total = row.total_modules || 1;\nconst pct = Math.round((completed / total) * 100);\n\nreturn [{ json: {\n  ...row,\n  completed_modules: completed,\n  completion_pct: pct\n} }];"
             },
             "name": "Progress: Calcular",
             "type": "n8n-nodes-base.code",
@@ -1696,9 +1696,9 @@
     "staticData": null,
     "meta": null,
     "pinData": {},
-    "versionId": "fdbc1395-74fc-4c22-b223-ef4eedb0b509",
-    "activeVersionId": "fdbc1395-74fc-4c22-b223-ef4eedb0b509",
-    "versionCounter": 38,
+    "versionId": "0efedf94-64ee-4af9-b21a-407728518140",
+    "activeVersionId": "0efedf94-64ee-4af9-b21a-407728518140",
+    "versionCounter": 100,
     "triggerCount": 1,
     "shared": [
         {
@@ -1721,9 +1721,9 @@
     ],
     "tags": [],
     "activeVersion": {
-        "updatedAt": "2026-02-22T04:16:51.900Z",
-        "createdAt": "2026-02-22T04:16:51.900Z",
-        "versionId": "fdbc1395-74fc-4c22-b223-ef4eedb0b509",
+        "updatedAt": "2026-02-22T11:20:52.914Z",
+        "createdAt": "2026-02-22T11:20:52.914Z",
+        "versionId": "0efedf94-64ee-4af9-b21a-407728518140",
         "workflowId": "SoB5evP9aOmj6hLA",
         "nodes": [
             {
@@ -2242,7 +2242,7 @@
             },
             {
                 "parameters": {
-                    "jsCode": "const row = $json;\nif (!row.name) return [{ json: { error: 'Aluno n\u00e3o encontrado' } }];\n\nconst completed = Array.isArray(row.completed_modules) ? row.completed_modules.length : 0;\nconst total = row.total_modules || 1;\nconst pct = Math.round((completed / total) * 100);\n\nreturn [{ json: {\n  ...row,\n  completed_modules: completed,\n  completion_pct: pct\n} }];"
+                    "jsCode": "const row = $json;\nif (!row.phone) return [{ json: { error: 'Aluno n\u00e3o encontrado' } }];\n\nconst completed = Array.isArray(row.completed_modules) ? row.completed_modules.length : 0;\nconst total = row.total_modules || 1;\nconst pct = Math.round((completed / total) * 100);\n\nreturn [{ json: {\n  ...row,\n  completed_modules: completed,\n  completion_pct: pct\n} }];"
                 },
                 "name": "Progress: Calcular",
                 "type": "n8n-nodes-base.code",
@@ -3413,18 +3413,34 @@
         "autosaved": false,
         "workflowPublishHistory": [
             {
-                "createdAt": "2026-02-22T04:16:52.080Z",
-                "id": 1574,
+                "createdAt": "2026-02-22T11:20:53.130Z",
+                "id": 1698,
                 "workflowId": "SoB5evP9aOmj6hLA",
-                "versionId": "fdbc1395-74fc-4c22-b223-ef4eedb0b509",
+                "versionId": "0efedf94-64ee-4af9-b21a-407728518140",
                 "event": "deactivated",
                 "userId": "d7e6ecc8-7259-4124-87c7-29a5f2d233ba"
             },
             {
-                "createdAt": "2026-02-22T04:16:52.149Z",
-                "id": 1575,
+                "createdAt": "2026-02-22T11:20:53.202Z",
+                "id": 1699,
                 "workflowId": "SoB5evP9aOmj6hLA",
-                "versionId": "fdbc1395-74fc-4c22-b223-ef4eedb0b509",
+                "versionId": "0efedf94-64ee-4af9-b21a-407728518140",
+                "event": "activated",
+                "userId": "d7e6ecc8-7259-4124-87c7-29a5f2d233ba"
+            },
+            {
+                "createdAt": "2026-02-22T11:20:54.693Z",
+                "id": 1700,
+                "workflowId": "SoB5evP9aOmj6hLA",
+                "versionId": "0efedf94-64ee-4af9-b21a-407728518140",
+                "event": "deactivated",
+                "userId": "d7e6ecc8-7259-4124-87c7-29a5f2d233ba"
+            },
+            {
+                "createdAt": "2026-02-22T11:20:54.719Z",
+                "id": 1701,
+                "workflowId": "SoB5evP9aOmj6hLA",
+                "versionId": "0efedf94-64ee-4af9-b21a-407728518140",
                 "event": "activated",
                 "userId": "d7e6ecc8-7259-4124-87c7-29a5f2d233ba"
             }
