@@ -9,6 +9,22 @@
     "nodes": [
         {
             "parameters": {
+                "httpMethod": "POST",
+                "path": "ai-tutor-v3",
+                "options": {}
+            },
+            "id": "webhook-start",
+            "name": "Webhook",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2,
+            "position": [
+                80,
+                304
+            ],
+            "webhookId": "kreativ-ai-tutor-v3"
+        },
+        {
+            "parameters": {
                 "jsCode": "const input = $json.body || $json;\nreturn [{\n  json: {\n    phone: input.phone || 'no-phone',\n    body: input.body || 'Oi',\n    timestamp: new Date().toISOString()\n  }\n}];"
             },
             "id": "transformer",
@@ -57,7 +73,7 @@
         },
         {
             "parameters": {
-                "jsCode": "\nlet phone = \"\";\nlet userMsg = \"\";\nlet courseName = \"Kreativ\";\nlet currentModule = 1;\nlet syllabus = \"\";\n\n// Pegar dados do input direto (Transformers/History)\ntry {\n  const input = .first().json;\n  phone = input.phone || \"\";\n  userMsg = input.body || input.userMessage || \"\";\n} catch(e) {}\n\n// Tentar pegar dados do Aluno de forma segura\ntry {\n  const std = .first().json;\n  courseName = std.course_name || courseName;\n  currentModule = std.current_module || currentModule;\n  syllabus = std.syllabus || \"\";\n} catch(e) {}\n\n// Tentar pegar RAG de forma segura\nlet ragContext = \"\";\ntry {\n  const rag = .first().json;\n  if (rag && rag.rag_chunks) {\n    ragContext = \"\\n--- CONTEXTO DO MODULO (RAG) ---\\n\" + rag.rag_chunks + \"\\n------------------------------\\n\";\n  }\n} catch(e) {}\n\nreturn [{\n  json: {\n    phone,\n    userMessage: userMsg,\n    course_name: courseName,\n    current_module: currentModule,\n    syllabus,\n    rag_context: ragContext\n  }\n}];\n"
+                "jsCode": "// Agrega dados do Combined Context Query (sempre 1 item)\nconst std     = $('Get Student Fallback').first().json;\nconst guard   = $('Redis: Read History').first().json;\nconst phone   = guard.phone;\nconst userMessage = guard.body;\n\n// Hist\u00f3rico deserializado\nconst historyRaw = guard.historyMessages || [];\nlet history = [];\ntry { history = historyRaw.map(h => JSON.parse(h)).reverse(); }\ncatch(e) { history = []; }\n\n// Dados do Combined Context Query\nlet ctxRow = {};\ntry { ctxRow = $('Combined Context Query').first().json; } catch(e) {}\n\nconst moduleRow   = ctxRow.module_row   || null;\nconst fewshotRows = Array.isArray(ctxRow.fewshot)    ? ctxRow.fewshot    : [];\nconst ragChunks   = Array.isArray(ctxRow.rag_chunks) ? ctxRow.rag_chunks : [];\n\n// M\u00f3dulo com fallback\nconst mod = moduleRow || {\n  title: 'Introdu\u00e7\u00e3o', syllabus: 'Conte\u00fado em prepara\u00e7\u00e3o.', evaluation_rubric: null\n};\n\n// Few-shot examples\nconst examples = fewshotRows.length > 0\n  ? fewshotRows.map(m => `P: ${m.question}\\nR: ${m.answer}`).join('\\n---\\n')\n  : '';\n\n// Contexto RAG (chunks > ementa)\nlet ragContext = '';\nif (ragChunks.length > 0) {\n  ragContext = '\\n\\nMATERIAL DO M\u00d3DULO (BASE DE CONHECIMENTO):\\n' +\n    ragChunks.map((c, i) => `[${i+1}] ${c.content}`).join('\\n\\n');\n} else if (mod.syllabus) {\n  ragContext = '\\n\\nEMENTA DO M\u00d3DULO:\\n' + mod.syllabus;\n}\n\nconst rubric = mod.evaluation_rubric\n  ? `\\n\\nCRIT\u00c9RIO DE AVALIA\u00c7\u00c3O:\\n${mod.evaluation_rubric}` : '';\n\nreturn [{\n  json: {\n    syllabus: mod.syllabus || 'Conte\u00fado em prepara\u00e7\u00e3o.',\n    rubric,\n    rag_context: ragContext,\n    student_name: std.name || 'Estudante',\n    course_name: std.course_name || 'Kreativ Educa\u00e7\u00e3o',\n    course_id: std.course_id || 19,\n    current_module: std.current_module || 1,\n    lead_score: std.lead_score || 0,\n    examples,\n    history,\n    phone,\n    userMessage,\n    rag_available: ragChunks.length > 0\n  }\n}];"
             },
             "id": "aggregator",
             "name": "Agregador de Contexto",
@@ -77,7 +93,7 @@
                     "parameters": [
                         {
                             "name": "Authorization",
-                            "value": "Bearer {{ .DEEPSEEK_API_KEY }}"
+                            "value": "Bearer sk-412552782fbe4009a25a013825e6ab66"
                         },
                         {
                             "name": "Content-Type",
@@ -150,18 +166,8 @@
         {
             "parameters": {
                 "operation": "executeQuery",
-                "query": "WITH module_data AS (\n  SELECT title, content_text AS syllabus, evaluation_rubric\n  FROM modules\n  WHERE course_int_id = {{ .course_id }}\n    AND module_number = {{ .current_module }}\n  LIMIT 1\n),\nfewshot_data AS (\n  SELECT question, answer\n  FROM training_memory\n  WHERE course_id = '{{ .course_id }}'\n     OR student_phone = '{{ .phone }}'\n  ORDER BY created_at DESC\n  LIMIT 3\n),\nrag_data AS (\n  SELECT dc.content, dc.metadata::text AS metadata\n  FROM document_chunks dc\n  JOIN modules m ON dc.module_id = m.id\n  WHERE m.course_int_id = {{ .course_id }}\n    AND m.module_number = {{ .current_module }}\n  ORDER BY dc.chunk_index ASC\n  LIMIT 5\n)\nSELECT\n  (SELECT row_to_json(md.*) FROM module_data md LIMIT 1) AS module_row,\n  (SELECT json_agg(fd.*)    FROM fewshot_data fd)        AS fewshot,\n  (SELECT json_agg(rd.*)    FROM rag_data rd)             AS rag_chunks;",
-                "options": {},
-                "qs": [
-                    {
-                        "name": "course_int_id",
-                        "value": "={{ .course_int_id || 0 }}"
-                    },
-                    {
-                        "name": "module_number",
-                        "value": "={{ .current_module || 0 }}"
-                    }
-                ]
+                "query": "WITH module_data AS (\n  SELECT title, content_text AS syllabus, evaluation_rubric\n  FROM modules\n  WHERE course_int_id = {{ $json.course_id }}\n    AND module_number = {{ $json.current_module }}\n  LIMIT 1\n),\nfewshot_data AS (\n  SELECT question, answer\n  FROM training_memory\n  WHERE course_id = '{{ $json.course_id }}'\n     OR student_phone = '{{ $json.phone }}'\n  ORDER BY created_at DESC\n  LIMIT 3\n),\nrag_data AS (\n  SELECT dc.content, dc.metadata::text AS metadata\n  FROM document_chunks dc\n  JOIN modules m ON dc.module_id = m.id\n  WHERE m.course_int_id = {{ $json.course_id }}\n    AND m.module_number = {{ $json.current_module }}\n  ORDER BY dc.chunk_index ASC\n  LIMIT 5\n)\nSELECT\n  (SELECT row_to_json(md.*) FROM module_data md LIMIT 1) AS module_row,\n  (SELECT json_agg(fd.*)    FROM fewshot_data fd)        AS fewshot,\n  (SELECT json_agg(rd.*)    FROM rag_data rd)             AS rag_chunks;",
+                "options": {}
             },
             "id": "pg-combined-context",
             "name": "Combined Context Query",
@@ -182,7 +188,7 @@
         },
         {
             "parameters": {
-                "jsCode": "// Redis Write History via TCP RESP protocol (direto, sem credencial N8N)\nconst net = require('net');\nconst REDIS_HOST = 'kreativ_redis';\nconst REDIS_PASS = 'kNiaYOxriWOcSiZyXhb5C9LU';\nconst REDIS_PORT = 6379;\n\nconst phone = $json.phone || '';\nconst userMsg = ($json.userMessage || '').substring(0, 1500);\nconst aiMsg = ($json.choices && $json.choices[0] && $json.choices[0].message)\n  ? $json.choices[0].message.content.substring(0, 1500) : '';\n\nif (!phone) return [{ json: { error: 'no phone' } }];\n\nconst key = 'chat_history:' + phone;\nconst userEntry = JSON.stringify({ role: 'user', content: userMsg });\nconst aiEntry   = JSON.stringify({ role: 'assistant', content: aiMsg });\n\nfunction mkCmd(args) {\n  const CRLF = '\\r\\n';\n  let out = '*' + args.length + CRLF;\n  for (const a of args) {\n    const s = String(a);\n    out += '$' + Buffer.byteLength(s, 'utf8') + CRLF + s + CRLF;\n  }\n  return out;\n}\n\nreturn new Promise((resolve) => {\n  const client = new net.Socket();\n  let buf = '';\n  let done = false;\n  const okCount = { n: 0 };\n\n  const finish = (result) => {\n    if (done) return;\n    done = true;\n    try { client.destroy(); } catch(e) {}\n    resolve(result);\n  };\n\n  client.connect(REDIS_PORT, REDIS_HOST, () => {\n    client.write(mkCmd(['AUTH', REDIS_PASS]));\n    client.write(mkCmd(['LPUSH', key, userEntry]));\n    client.write(mkCmd(['LPUSH', key, aiEntry]));\n    client.write(mkCmd(['LTRIM', key, '0', '19']));\n    client.write(mkCmd(['EXPIRE', key, '86400']));\n  });\n\n  client.on('data', (data) => {\n    buf += data.toString('utf8');\n    const parts = buf.split('\\r\\n');\n    const oks = parts.filter(p => p.startsWith('+') || p.startsWith(':'));\n    okCount.n = oks.length;\n    if (oks.length >= 5) {\n      finish([{ json: { phone, key, ok: oks.length, history_written: true, aiContent: aiMsg, response: aiMsg } }]);\n    }\n  });\n\n  client.on('error', (err) => {\n    finish([{ json: { phone, key, error: err.message, aiContent: aiMsg, response: aiMsg } }]);\n  });\n\n  client.on('close', () => {\n    finish([{ json: { phone, key, ok: okCount.n, closed: true, aiContent: aiMsg, response: aiMsg } }]);\n  });\n\n  setTimeout(() => {\n    finish([{ json: { phone, key, ok: okCount.n, timeout: true, aiContent: aiMsg, response: aiMsg } }]);\n  }, 5000);\n});\n"
+                "jsCode": "// Redis Write History via TCP RESP protocol (direto, sem credencial N8N)\nconst net = require('net');\nconst REDIS_HOST = 'kreativ_redis';\nconst REDIS_PASS = 'kNiaYOxriWOcSiZyXhb5C9LU';\nconst REDIS_PORT = 6379;\n\nconst phone = $json.phone || '';\nconst userMsg = ($json.userMessage || '').substring(0, 1500);\nconst aiMsg = ($json.choices && $json.choices[0] && $json.choices[0].message)\n  ? $json.choices[0].message.content.substring(0, 1500) : '';\n\nif (!phone) return [{ json: { error: 'no phone' } }];\n\nconst key = 'chat_history:' + phone;\nconst userEntry = JSON.stringify({ role: 'user', content: userMsg });\nconst aiEntry   = JSON.stringify({ role: 'assistant', content: aiMsg });\n\nfunction mkCmd(args) {\n  const CRLF = '\\r\\n';\n  let out = '*' + args.length + CRLF;\n  for (const a of args) {\n    const s = String(a);\n    out += '$' + Buffer.byteLength(s, 'utf8') + CRLF + s + CRLF;\n  }\n  return out;\n}\n\nreturn new Promise((resolve) => {\n  const client = new net.Socket();\n  let buf = '';\n  let done = false;\n  const okCount = { n: 0 };\n\n  const finish = (result) => {\n    if (done) return;\n    done = true;\n    try { client.destroy(); } catch(e) {}\n    resolve(result);\n  };\n\n  client.connect(REDIS_PORT, REDIS_HOST, () => {\n    client.write(mkCmd(['AUTH', REDIS_PASS]));\n    client.write(mkCmd(['LPUSH', key, userEntry]));\n    client.write(mkCmd(['LPUSH', key, aiEntry]));\n    client.write(mkCmd(['LTRIM', key, '0', '19']));\n    client.write(mkCmd(['EXPIRE', key, '86400']));\n  });\n\n  client.on('data', (data) => {\n    buf += data.toString('utf8');\n    const parts = buf.split('\\r\\n');\n    const oks = parts.filter(p => p.startsWith('+') || p.startsWith(':'));\n    okCount.n = oks.length;\n    if (oks.length >= 5) {\n      finish([{ json: { phone, key, ok: oks.length, history_written: true, aiContent: aiMsg } }]);\n    }\n  });\n\n  client.on('error', (err) => {\n    finish([{ json: { phone, key, error: err.message, aiContent: aiMsg } }]);\n  });\n\n  client.on('close', () => {\n    finish([{ json: { phone, key, ok: okCount.n, closed: true, aiContent: aiMsg } }]);\n  });\n\n  setTimeout(() => {\n    finish([{ json: { phone, key, ok: okCount.n, timeout: true, aiContent: aiMsg } }]);\n  }, 5000);\n});\n"
             },
             "id": "redis-write-history",
             "name": "Redis: Write History",
@@ -224,14 +230,15 @@
         {
             "parameters": {
                 "respondWith": "json",
-                "responseBody": "={{ { \"diag\": \"SUB-WORKFLOW REACHED\", \"input\":  } }}"
+                "responseBody": "={{ JSON.stringify({ response: .aiContent }) }}"
             },
-            "name": "Diag Response",
+            "id": "respond-to-router",
+            "name": "Respond to Router",
             "type": "n8n-nodes-base.respondToWebhook",
             "typeVersion": 1,
             "position": [
-                100,
-                200
+                3200,
+                304
             ]
         }
     ],
@@ -241,11 +248,6 @@
                 [
                     {
                         "node": "Transformer",
-                        "type": "main",
-                        "index": 0
-                    },
-                    {
-                        "node": "Diag Response",
                         "type": "main",
                         "index": 0
                     }
@@ -334,6 +336,11 @@
                 [
                     {
                         "node": "Send WhatsApp",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Respond to Router",
                         "type": "main",
                         "index": 0
                     }
