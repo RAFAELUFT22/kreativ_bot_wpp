@@ -5,6 +5,52 @@
 
 ---
 
+## 0. INCIDENTE CRÍTICO + CORREÇÕES (22/02/2026 — Sessão 2 com Claude)
+
+### 0.1 O que o Gemini fez de errado
+O Gemini (sessão anterior) **destruiu dois workflows de produção** ao substituí-los por skeletons:
+- `60-kreativ-api-ultimate.json`: 43 nós → 4 nós (apenas Webhook + Normalizar + AI Tutor proxy + Responder)
+- `20-ai-router-v3-redis-rag.json`: 13 nós → 12 nós + sintaxe Go template inválida (`{{ .DEEPSEEK_API_KEY }}`)
+- Ambos foram desativados em produção
+
+O Gemini também criou `scripts/ingest_embeddings.py` (útil para RAG, mantido).
+
+### 0.2 Correções aplicadas nesta sessão (Claude, commit 5fb2c98)
+
+**a) Restauração dos workflows (commits b8eab4f)**
+- Restaurados via `git checkout HEAD~2` e re-implantados via N8N API PUT
+- Todos os 5 workflows reativados:  ULTIMATE, AI Router V3, WhatsApp Router, Chatwoot Bot, Error Handler
+
+**b) Fix do sub-workflow AI Router V3 (commit 7ee3be2)**
+- Adicionado `Execute Workflow Trigger` — N8N atual exige este nó em sub-workflows chamados via `executeWorkflow`
+- Corrigido `Transformer` para suportar ambos os modos (executeWorkflow vs Webhook direto)
+- Substituído `Respond to Router` (respondToWebhook → falha em contexto executeWorkflow) por Code node passthrough
+- AI Tutor testado e funcionando: DeepSeek responde com contexto real do aluno
+
+**c) Fix do bug Progress: Calcular (commit 5fb2c98)**
+- `if (!row.name)` → `if (!row.phone)` — o aluno teste tem `name=NULL`, causava falso "Aluno não encontrado"
+- `get_progress` agora retorna corretamente: `{ module=2, pct=0%, course_name=Agronegócio... }`
+
+### 0.3 Estado pós-sessão (smoke tests OK)
+```
+✅ check_student → { status=bot, module=2, course=Agronegócio }
+✅ get_progress  → { module=2, pct=0% }
+✅ Payload inválido → HTTP 400
+✅ AI Tutor → resposta contextual DeepSeek em ~5s
+✅ get_module → retorna dados do módulo + quiz gerado
+```
+
+### 0.4 Workflows ativos em produção (5/5)
+```
+✅ SoB5evP9aOmj6hLA — Kreativ: Unified API Router (v1.1 - ULTIMATE) — 43 nós
+✅ 5caL67H387euTxan — Kreativ: AI Adaptive Router V3 (Redis Memory + RAG) — 14 nós
+✅ a0RywHWeY5kfgzGT — Kreativ: AI Tutor V3 (RAG - FINAL) — WhatsApp Router
+✅ y92mEtPP4nK1p037 — Kreativ: Chatwoot → Retomar Bot & Treinamento
+✅ mFwiM2dZyKeEgKk6 — 99-Global-Error-Handler
+```
+
+---
+
 ## 1. O QUE FOI FEITO HOJE (22/02/2026)
 
 ### 1.1 Limpeza do Repositório (commits 20b5da9 → 4257a9d)
@@ -507,13 +553,17 @@ SELECT 'certificates', COUNT(*) FROM certificates;"
 
 ## 7. PRÓXIMA SESSÃO — SEQUÊNCIA RECOMENDADA
 
+**ATENÇÃO**: Fase 2 (SQL transactions, auth, rate limiting) está marcada como CONCLUÍDO no doc
+mas NÃO foi verificada nesta sessão — pode ser que o Gemini tenha aplicado apenas no skeleton
+que foi descartado. Verificar se esses nós existem no ULTIMATE atual antes de assumir que estão OK.
+
 ```
 1. Ler este doc (30s)
 2. Rodar smoke test (comandos da seção 4) — confirmar tudo verde
-3. Verificar git log: git log --oneline -5
-4. Iniciar pela Fase 2 (segurança) — é curta e desbloqueante
-5. Depois Fase 3B (submit_quiz) — testar o fluxo quiz end-to-end
-6. Depois RAG (popular embeddings dos módulos principais)
+3. git log --oneline -5
+4. VERIFICAR Fase 2: existe nó 'Redis Rate Limit' no ULTIMATE? Existe validação auth no Normalizar Input?
+5. Testar submit_quiz end-to-end (Fase 3B)
+6. Popular embeddings dos módulos principais via scripts/ingest_embeddings.py (Fase 3C)
 7. Atualizar este doc ao finalizar cada fase
 ```
 
@@ -523,6 +573,7 @@ SELECT 'certificates', COUNT(*) FROM certificates;"
 - [ ] AI Tutor responde em < 30s?
 - [ ] Payload inválido retorna 400?
 - [ ] `git status` — repo limpo?
+- [ ] **NOVO**: Verificar se Fase 2 foi realmente aplicada (Rate Limit, Auth, SQL transactions)
 
 ---
 
