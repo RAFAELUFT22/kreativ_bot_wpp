@@ -149,6 +149,7 @@ V = {
     "ai_response":      "v_ai_resp",
     "tutor_question":   "v_tutor_q",
     "menu_choice":      "v_menu",        # captures button/list reply title
+    "quiz_raw_answer":  "v_quiz_raw",    # Captura todas as respostas em um bloco
 }
 
 variables = [{"id": vid, "name": name, "isSessionVariable": True}
@@ -277,25 +278,21 @@ groups.append(group("g3", "Módulo", 900, -400, [
     }),
     tx("b_g3_title", "📖 *{{module_title}}*"),
     tx("b_g3_body",  "{{module_content}}"),
-    tx("b_g3_quiz_wpp", "📝 *Quiz chegando!*\nAs perguntas serão enviadas nesta conversa em instantes. Aguarde! 📱", "e_g3_g2"),
+    tx("b_g3_quiz_wpp", "📝 *Quiz chegando!*\nPrepare-se para responder 3 perguntas sobre este conteúdo.", "e_g3_g4"),
 ]))
-edges.append(edge("e_g3_g2", "b_g3_quiz_wpp", "g2"))
+edges.append(edge("e_g3_g4", "b_g3_quiz_wpp", "g4"))
 
 # ── g4: Quiz — coleta 3 respostas + submete + avalia ─────────────────────────
 groups.append(group("g4", "Quiz", 1300, -400, [
-    inp("b_g4_a1", V["answer_1"], "Sua resposta para a P1...", "Responder"),
-    tx("b_g4_q2",  "❓ *Pergunta 2:*\n{{question_2}}"),
-    inp("b_g4_a2", V["answer_2"], "Sua resposta para a P2...", "Responder"),
-    tx("b_g4_q3",  "❓ *Pergunta 3:*\n{{question_3}}"),
-    inp("b_g4_a3", V["answer_3"], "Sua resposta para a P3...", "Enviar respostas"),
-    tx("b_g4_eval", "🤔 Enviando respostas..."),
+    tx("b_g4_intro", "✍️ *Instruções:*\nLeia as perguntas abaixo e responda todas em uma única mensagem (pode ser texto livre, a IA vai avaliar seu entendimento)."),
+    tx("b_g4_qs", "❓ *Perguntas:* \n\n1. {{question_1}}\n2. {{question_2}}\n3. {{question_3}}"),
+    inp("b_g4_ans", V["quiz_raw_answer"], "Escreva suas respostas aqui...", "Enviar Avaliação"),
+    tx("b_g4_eval", "🤔 Enviando suas respostas para correção..."),
     wb("b_g4_submit", "submit_quiz", {
         "module_number": "{{current_module}}",
-        "question_1": "{{question_1}}", "answer_1": "{{answer_1}}",
-        "question_2": "{{question_2}}", "answer_2": "{{answer_2}}",
-        "question_3": "{{question_3}}", "answer_3": "{{answer_3}}",
+        "answers": "{{quiz_raw_answer}}",
     }, {}),   # async: resultado chega via WhatsApp direto
-    tx("b_g4_result", "✅ Respostas enviadas!\n\nO resultado da avaliação chegará nesta conversa em instantes. 📱", "e_g4_g2"),
+    tx("b_g4_result", "✅ Respostas enviadas!\n\nO resultado chegará em instantes. Enquanto isso, você voltou ao menu principal.", "e_g4_g2"),
 ]))
 edges.append(edge("e_g4_g2", "b_g4_result", "g2"))
 

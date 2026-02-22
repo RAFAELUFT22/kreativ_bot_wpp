@@ -125,7 +125,7 @@ export default function CertificadoPage({ certId, studentName, moduleName, cours
                         </p>
                         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
                             <Link href="/" className="btn btn-outline">← Início</Link>
-                            <a href="https://wa.me/556399374165" className="btn btn-gold">💬 Falar pelo WhatsApp</a>
+                            <a href={`https://wa.me/${process.env.NEXT_PUBLIC_SUPPORT_PHONE || '556399374165'}`} className="btn btn-gold">💬 Falar pelo WhatsApp</a>
                         </div>
                     </div>
                 )}

@@ -2,6 +2,7 @@ import { GetServerSideProps } from 'next'
 import Head from 'next/head'
 import Link from 'next/link'
 import { Pool } from 'pg'
+import ReactMarkdown from 'react-markdown'
 
 interface Module {
     id: string
@@ -132,7 +133,9 @@ export default function ModulePage({ module: mod, prevId, nextId }: Props) {
 
                 <div className="module-body">
                     {mod.content_text ? (
-                        <div dangerouslySetInnerHTML={{ __html: mod.content_text.replace(/\n/g, '<br />') }} />
+                        <div className="markdown-content">
+                            <ReactMarkdown>{mod.content_text}</ReactMarkdown>
+                        </div>
                     ) : (
                         <div className="centered" style={{ minHeight: '200px' }}>
                             <p>Conteúdo em preparação. Acesse pelo WhatsApp para a versão completa.</p>
@@ -160,7 +163,7 @@ export default function ModulePage({ module: mod, prevId, nextId }: Props) {
                     </div>
                     <a
                         className="btn btn-gold"
-                        href="https://wa.me/556399374165?text=QUIZ"
+                        href={`https://wa.me/${process.env.NEXT_PUBLIC_SUPPORT_PHONE || '556399374165'}?text=QUIZ`}
                         target="_blank"
                         rel="noopener noreferrer"
                         style={{ whiteSpace: 'nowrap' }}

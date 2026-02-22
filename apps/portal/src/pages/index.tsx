@@ -54,7 +54,7 @@ export default function Home({ modules, error }: Props) {
             <nav className="navbar">
                 <div className="navbar-inner">
                     <div className="logo">Kreativ <span>Portal do Aluno</span></div>
-                    <a className="btn btn-gold" href="https://wa.me/556399374165" style={{ padding: '8px 16px', fontSize: '13px' }}>
+                    <a className="btn btn-gold" href={`https://wa.me/${process.env.NEXT_PUBLIC_SUPPORT_PHONE || '556399374165'}`} style={{ padding: '8px 16px', fontSize: '13px' }}>
                         💬 Falar com Tutor
                     </a>
                 </div>
@@ -80,7 +80,7 @@ export default function Home({ modules, error }: Props) {
                         <div style={{ fontSize: '48px' }}>📚</div>
                         <h2>Nenhum módulo ainda</h2>
                         <p>Os módulos serão disponibilizados em breve. Fique ligado!</p>
-                        <a className="btn btn-gold" href="https://wa.me/556399374165">Notifique-me via WhatsApp</a>
+                        <a className="btn btn-gold" href={`https://wa.me/${process.env.NEXT_PUBLIC_SUPPORT_PHONE || '556399374165'}`}>Notifique-me via WhatsApp</a>
                     </div>
                 )}
 

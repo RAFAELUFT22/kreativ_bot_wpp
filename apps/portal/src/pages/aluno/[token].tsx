@@ -181,7 +181,7 @@ export default function AlunoDashboard({ student, modules, certificates, token }
                 <div style={{ fontSize: '48px' }}>🔑</div>
                 <h2>Acesso não encontrado</h2>
                 <p>Este link é inválido ou expirou. Entre em contato pelo WhatsApp.</p>
-                <a className="btn btn-gold" href="https://wa.me/556399374165">Falar pelo WhatsApp</a>
+                <a className="btn btn-gold" href={`https://wa.me/${process.env.NEXT_PUBLIC_SUPPORT_PHONE || '556399374165'}`}>Falar pelo WhatsApp</a>
             </div>
         )
     }
@@ -206,7 +206,7 @@ export default function AlunoDashboard({ student, modules, certificates, token }
                     <Link href="/" className="logo">Kreativ <span>Portal do Aluno</span></Link>
                     <a
                         className="btn btn-gold"
-                        href="https://wa.me/556399374165"
+                        href={`https://wa.me/${process.env.NEXT_PUBLIC_SUPPORT_PHONE || '556399374165'}`}
                         style={{ padding: '8px 16px', fontSize: '13px' }}
                     >
                         💬 Falar com Tutor
@@ -340,7 +340,7 @@ export default function AlunoDashboard({ student, modules, certificates, token }
                     </p>
                     <a
                         className="btn btn-gold"
-                        href="https://wa.me/556399374165?text=OI"
+                        href={`https://wa.me/${process.env.NEXT_PUBLIC_SUPPORT_PHONE || '556399374165'}?text=OI`}
                         target="_blank"
                         rel="noopener noreferrer"
                     >
