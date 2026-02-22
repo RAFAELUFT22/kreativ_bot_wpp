@@ -3,6 +3,9 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import base64, io, os, logging, uuid
 
+import socket
+from urllib.parse import urlparse, urlunparse
+
 import pdfplumber
 from docx import Document as DocxDocument
 import boto3
@@ -43,13 +46,25 @@ class ProcessRequest(BaseModel):
 def db():
     return psycopg2.connect(**PG)
 
+def resolve_minio_url(url: str) -> str:
+    """boto3 rejects underscore hostnames — resolve to IP at connect time."""
+    parsed = urlparse(url)
+    try:
+        ip = socket.gethostbyname(parsed.hostname)
+        port = parsed.port or 9000
+        return urlunparse(parsed._replace(netloc=f"{ip}:{port}"))
+    except Exception:
+        return url
+
 def s3():
+    resolved = resolve_minio_url(MINIO_URL)
     return boto3.client(
         "s3",
-        endpoint_url=MINIO_URL,
+        endpoint_url=resolved,
         aws_access_key_id=MINIO_KEY,
         aws_secret_access_key=MINIO_SECRET,
         config=Config(signature_version="s3v4"),
+        region_name="us-east-1",
     )
 
 def ensure_bucket(client):
