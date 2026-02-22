@@ -24,7 +24,9 @@ O `check_student` não apenas verifica o aluno, mas retorna um **Objeto de Estad
 
 ### 5. RAG Autogerenciável (Knowledge Ingest)
 - Criada a ação `rag_ingest` que permite subir PDFs via chat (Typebot Admin).
-- O n8n faz o download, extrai texto, gera **embeddings** (vetores) via DeepSeek e salva no Postgres (`pgvector`).
+### 6. Estabilização de UI & Sincronismo (Fev 21, 2026)
+- **Aliasing de Variáveis**: Mapeamos campos internos do n8n para nomes amigáveis ao Typebot (`progress_pct`, `student_name`, `quiz_score`).
+- **Sync AI Tutor**: O workflow do roteador foi alterado para aguardar a resposta da IA e entregá-la via `Respond to Webhook`.
 
 ---
 

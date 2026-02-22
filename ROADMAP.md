@@ -1,6 +1,6 @@
 # ROADMAP — Kreativ Educação: Próximos Passos de Implementação
 
-> Atualizado em: 21/02/2026 (v0.3 — Typebot ativo)
+> Atualizado em: 22/02/2026 (v0.4.1 — Gestão de Alunos Concluída)
 
 ---
 
@@ -34,7 +34,8 @@
 ### FASE 7 — ToolJet (Painel Administrativo) ✅
 - **URL**: `https://admin.extensionista.site`
 - **Status**: Online. DB `tooljet_db` criado.
-- **Função**: Gestão de módulos e alunos (low-code).
+- **Função**: Gestão de módulos e gestão manual de alunos (v0.3.6).
+- **Blueprint**: Configurado para cadastros, edições e resets de alunos via Admin.
 
 ### FASE 8 — Chatwoot (Tutores) ✅
 - **URL**: `https://suporte.extensionista.site`
@@ -75,18 +76,9 @@
 
 ---
 
-### FASE 3A — Corrigir Botões WhatsApp (URGENTE)
-**Problema**: Typebot `Choice Input` blocks aparecem como texto com emojis no WhatsApp, não como botões interativos.
-
-**Opção rápida** (Evolution Baileys):
-- Substituir Choice Input por texto com sintaxe `[buttons]` que a Evolution converte em botões nativos
-- Máximo 3 botões por mensagem. Para menus maiores usar `[list]`
-
-**Opção definitiva** (Cloud API Meta):
-- Migrar instância Evolution para `WHATSAPP-BUSINESS` (Cloud API)
-- Suporte oficial a botões, listas, templates — sem limitações Baileys
-- Requer aprovação Meta Business Account
-
+### FASE 3A — Corrigir Botões WhatsApp ✅
+- **Status**: Concluído via sintaxe `[buttons]` da Evolution API.
+- **Implementação**: Blocos de texto dinâmicos que geram botões nativos.
 ---
 
 ### FASE 3B — Avaliação Quiz com DeepSeek
@@ -111,14 +103,21 @@
 
 ---
 
-### FASE 5 — Cloud API Meta (Migração Evolution)
-**Por que**: Baileys pode ser bloqueado pela Meta; Cloud API tem suporte oficial a botões interativos.
-
+### FASE 6 — Voice Integration (Voz no Bot)
+**Objetivo**: Permitir que o aluno mande áudios e receba respostas em voz.
 **Passos**:
-1. Criar Meta App com permissões WhatsApp Business
-2. Obter System User Token permanente (não expira como o JWT)
-3. Configurar instância `europs` com `integration: WHATSAPP-BUSINESS`
-4. Guia completo: `GUIA_META_WEBHOOK.md`
+1. Configurar Evolution API para baixar áudios.
+2. Usar OpenAI Whisper (via n8n) para transcrição.
+3. Responder usando OpenAI TTS ou ElevenLabs no fluxo de saída.
+
+---
+
+### FASE 13 — Observabilidade e Monitoramento
+**Objetivo**: Dashboard de falhas da IA e latência de resposta.
+**Passos**:
+1. Criar tabela `api_logs` para cada request ao n8n.
+2. Monitorar erros de RAG (respostas "não sei").
+3. Alertas via WhatsApp para o admin se a API do DeepSeek falhar.
 
 ---
 
@@ -126,8 +125,8 @@
 
 | Prioridade | Fase | Status |
 |---|---|---|
-| 🟢 CONCLUÍDO | 1, 2, 2b, 3, 7, 8, 9, 10, 11, 12 | ✅ |
-| 🔴 URGENTE | 3A (Botões WhatsApp) | Pendente |
+| 🟢 CONCLUÍDO | 1, 2, 2b, 3, 3A, 7, 8, 9, 10, 11, 12 | ✅ |
+| 🟢 CONCLUÍDO | Gestão de Alunos (Admin) | ✅ |
 | 🟠 ALTA | 3B (Quiz DeepSeek) | Pendente |
 | 🟠 ALTA | 4 (RAG Embeddings) | Pendente |
 | 🟡 MÉDIA | 5 (Cloud API Meta) | Pendente |

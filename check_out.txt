@@ -1,0 +1,9 @@
+Checking ID 938 (success)...
+  Nodes: ['Webhook Chatwoot', 'Extrair Evento', 'Tipo de Evento', 'Verificar Estado Atual', 'Idempotência: Já é Bot?', 'Retomar Bot no DB', 'Redis: Set Bot', 'Retomar Typebot']
+  SUCCESS in ID 938
+Checking ID 937 (error)...
+  Nodes: ['Webhook Chatwoot']
+  Retomar Typebot DID NOT RUN in ID 937
+Checking ID 936 (success)...
+  Nodes: ['Webhook Chatwoot', 'Extrair Evento', 'Tipo de Evento', 'Verificar Estado Atual', 'Idempotência: Já é Bot?', 'Retomar Bot no DB', 'Redis: Set Bot']
+  Retomar Typebot DID NOT RUN in ID 936

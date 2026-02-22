@@ -1,0 +1,150 @@
+{
+  "groups": [
+    {
+      "id": "group1",
+      "title": "Pizzaria Bot",
+      "blocks": [
+        {
+          "id": "startBlock",
+          "type": "start"
+        },
+        {
+          "id": "askFlavor",
+          "type": "text",
+          "content": {
+            "richText": [
+              {
+                "children": [
+                  {
+                    "text": "Qual sabor de pizza você gostaria?"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "flavorChoice",
+          "type": "Choice",
+          "items": [
+            {
+              "id": "margherita",
+              "content": "Margherita"
+            },
+            {
+              "id": "pepperoni",
+              "content": "Pepperoni"
+            },
+            {
+              "id": "calabresa",
+              "content": "Calabresa"
+            }
+          ]
+        },
+        {
+          "id": "askSize",
+          "type": "text",
+          "content": {
+            "richText": [
+              {
+                "children": [
+                  {
+                    "text": "Qual tamanho você prefere?"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "sizeChoice",
+          "type": "Choice",
+          "items": [
+            {
+              "id": "small",
+              "content": "Pequena"
+            },
+            {
+              "id": "medium",
+              "content": "Média"
+            },
+            {
+              "id": "large",
+              "content": "Grande"
+            }
+          ]
+        },
+        {
+          "id": "finalMessage",
+          "type": "text",
+          "content": {
+            "richText": [
+              {
+                "children": [
+                  {
+                    "text": "Pedido realizado! Sua pizza será preparada em breve."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "variables": [],
+  "edges": [
+    {
+      "id": "edge1",
+      "from": {
+        "eventId": "startEvent"
+      },
+      "to": {
+        "blockId": "askFlavor"
+      }
+    },
+    {
+      "id": "edge2",
+      "from": {
+        "blockId": "askFlavor"
+      },
+      "to": {
+        "blockId": "flavorChoice"
+      }
+    },
+    {
+      "id": "edge3",
+      "from": {
+        "blockId": "flavorChoice"
+      },
+      "to": {
+        "blockId": "askSize"
+      }
+    },
+    {
+      "id": "edge4",
+      "from": {
+        "blockId": "askSize"
+      },
+      "to": {
+        "blockId": "sizeChoice"
+      }
+    },
+    {
+      "id": "edge5",
+      "from": {
+        "blockId": "sizeChoice"
+      },
+      "to": {
+        "blockId": "finalMessage"
+      }
+    }
+  ],
+  "events": [
+    {
+      "id": "startEvent",
+      "type": "start",
+      "outgoingEdgeId": "edge1"
+    }
+  ]
+}

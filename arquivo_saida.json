@@ -1,0 +1,253 @@
+{
+  "groups": [
+    {
+      "id": "group1",
+      "title": "Trilha de Conhecimento Sobre IA",
+      "blocks": [
+        {
+          "id": "startBlock",
+          "type": "start",
+          "label": "Início"
+        },
+        {
+          "id": "introText",
+          "type": "text",
+          "content": {
+            "richText": {
+              "children": [
+                {
+                  "text": "Bem-vindo à Trilha de Conhecimento Sobre IA! Vou te ensinar como começar a usar ferramentas como Gemini, ChatGPT e DeepSeek, mesmo sem experiência prévia."
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "choiceBlock",
+          "type": "Choice",
+          "items": [
+            {
+              "id": "choice1",
+              "content": "Quero aprender sobre Gemini"
+            },
+            {
+              "id": "choice2",
+              "content": "Quero aprender sobre ChatGPT"
+            },
+            {
+              "id": "choice3",
+              "content": "Quero aprender sobre DeepSeek"
+            },
+            {
+              "id": "choice4",
+              "content": "Como aplicar no meu contexto"
+            }
+          ]
+        },
+        {
+          "id": "geminiText",
+          "type": "text",
+          "content": {
+            "richText": {
+              "children": [
+                {
+                  "text": "Gemini é uma IA do Google. Acesse via Bard ou site oficial. É gratuito, responde em português e pode gerar textos, resumos e ideias. Experimente perguntar coisas simples primeiro!"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "chatgptText",
+          "type": "text",
+          "content": {
+            "richText": {
+              "children": [
+                {
+                  "text": "ChatGPT é da OpenAI. Use a versão gratuita no site ou app. Ele é ótimo para conversas, tirar dúvidas e criar conteúdo. Dica: seja específico nas perguntas para melhores respostas."
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "deepseekText",
+          "type": "text",
+          "content": {
+            "richText": {
+              "children": [
+                {
+                  "text": "DeepSeek é uma IA gratuita e poderosa. Acesse pelo site ou app. Ela é boa para tarefas técnicas, programação e análises. Tente pedir ajuda com problemas do seu dia a dia."
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "contextText",
+          "type": "text",
+          "content": {
+            "richText": {
+              "children": [
+                {
+                  "text": "Para usar no seu contexto: 1) Identifique uma necessidade (ex: escrever um email). 2) Escolha uma ferramenta. 3) Peça ajuda passo a passo. 4) Adapte a resposta à sua realidade. Pratique regularmente!"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "conditionBlock",
+          "type": "Condition",
+          "items": [
+            {
+              "id": "cond1",
+              "content": "Continuar aprendendo"
+            },
+            {
+              "id": "cond2",
+              "content": "Finalizar"
+            }
+          ]
+        },
+        {
+          "id": "finalText",
+          "type": "text",
+          "content": {
+            "richText": {
+              "children": [
+                {
+                  "text": "Ótimo! Continue explorando essas ferramentas. A prática leva à maestria. Volte sempre que tiver dúvidas!"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variables": [],
+  "edges": [
+    {
+      "id": "edge1",
+      "from": {
+        "eventId": "startEvent"
+      },
+      "to": {
+        "blockId": "introText"
+      }
+    },
+    {
+      "id": "edge2",
+      "from": {
+        "blockId": "introText"
+      },
+      "to": {
+        "blockId": "choiceBlock"
+      }
+    },
+    {
+      "id": "edge3",
+      "from": {
+        "blockId": "choiceBlock",
+        "itemId": "choice1"
+      },
+      "to": {
+        "blockId": "geminiText"
+      }
+    },
+    {
+      "id": "edge4",
+      "from": {
+        "blockId": "choiceBlock",
+        "itemId": "choice2"
+      },
+      "to": {
+        "blockId": "chatgptText"
+      }
+    },
+    {
+      "id": "edge5",
+      "from": {
+        "blockId": "choiceBlock",
+        "itemId": "choice3"
+      },
+      "to": {
+        "blockId": "deepseekText"
+      }
+    },
+    {
+      "id": "edge6",
+      "from": {
+        "blockId": "choiceBlock",
+        "itemId": "choice4"
+      },
+      "to": {
+        "blockId": "contextText"
+      }
+    },
+    {
+      "id": "edge7",
+      "from": {
+        "blockId": "geminiText"
+      },
+      "to": {
+        "blockId": "conditionBlock"
+      }
+    },
+    {
+      "id": "edge8",
+      "from": {
+        "blockId": "chatgptText"
+      },
+      "to": {
+        "blockId": "conditionBlock"
+      }
+    },
+    {
+      "id": "edge9",
+      "from": {
+        "blockId": "deepseekText"
+      },
+      "to": {
+        "blockId": "conditionBlock"
+      }
+    },
+    {
+      "id": "edge10",
+      "from": {
+        "blockId": "contextText"
+      },
+      "to": {
+        "blockId": "conditionBlock"
+      }
+    },
+    {
+      "id": "edge11",
+      "from": {
+        "blockId": "conditionBlock",
+        "itemId": "cond1"
+      },
+      "to": {
+        "blockId": "choiceBlock"
+      }
+    },
+    {
+      "id": "edge12",
+      "from": {
+        "blockId": "conditionBlock",
+        "itemId": "cond2"
+      },
+      "to": {
+        "blockId": "finalText"
+      }
+    }
+  ],
+  "events": [
+    {
+      "id": "startEvent",
+      "type": "start",
+      "outgoingEdgeId": "edge1"
+    }
+  ]
+}

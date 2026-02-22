@@ -1,0 +1,371 @@
+{
+  "groups": [
+    {
+      "id": "group1",
+      "title": "Main Flow",
+      "blocks": [
+        {
+          "id": "startBlock",
+          "type": "start",
+          "label": "Start"
+        },
+        {
+          "id": "menuBlock",
+          "type": "text",
+          "content": {
+            "richText": {
+              "children": [
+                {
+                  "text": "Bem-vindo ao Kreativ Educação! Escolha uma opção:"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "choiceBlock",
+          "type": "Choice",
+          "items": [
+            {
+              "id": "moduleOption",
+              "content": "Módulo de Aula"
+            },
+            {
+              "id": "quizOption",
+              "content": "Quiz"
+            },
+            {
+              "id": "certificateOption",
+              "content": "Emitir Certificado"
+            }
+          ]
+        },
+        {
+          "id": "moduleBlock",
+          "type": "text",
+          "content": {
+            "richText": {
+              "children": [
+                {
+                  "text": "Este é o módulo de aula. Aqui você aprenderá conceitos importantes."
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "quizBlock",
+          "type": "text",
+          "content": {
+            "richText": {
+              "children": [
+                {
+                  "text": "Vamos começar o quiz com 3 perguntas."
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "question1Block",
+          "type": "text",
+          "content": {
+            "richText": {
+              "children": [
+                {
+                  "text": "Pergunta 1: Qual é a capital do Brasil?"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "question1Choice",
+          "type": "Choice",
+          "items": [
+            {
+              "id": "q1Correct",
+              "content": "Brasília"
+            },
+            {
+              "id": "q1Wrong1",
+              "content": "Rio de Janeiro"
+            },
+            {
+              "id": "q1Wrong2",
+              "content": "São Paulo"
+            }
+          ]
+        },
+        {
+          "id": "question2Block",
+          "type": "text",
+          "content": {
+            "richText": {
+              "children": [
+                {
+                  "text": "Pergunta 2: Quantos planetas existem no sistema solar?"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "question2Choice",
+          "type": "Choice",
+          "items": [
+            {
+              "id": "q2Correct",
+              "content": "8"
+            },
+            {
+              "id": "q2Wrong1",
+              "content": "9"
+            },
+            {
+              "id": "q2Wrong2",
+              "content": "7"
+            }
+          ]
+        },
+        {
+          "id": "question3Block",
+          "type": "text",
+          "content": {
+            "richText": {
+              "children": [
+                {
+                  "text": "Pergunta 3: Qual é o maior oceano da Terra?"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "question3Choice",
+          "type": "Choice",
+          "items": [
+            {
+              "id": "q3Correct",
+              "content": "Pacífico"
+            },
+            {
+              "id": "q3Wrong1",
+              "content": "Atlântico"
+            },
+            {
+              "id": "q3Wrong2",
+              "content": "Índico"
+            }
+          ]
+        },
+        {
+          "id": "certificateBlock",
+          "type": "text",
+          "content": {
+            "richText": {
+              "children": [
+                {
+                  "text": "Parabéns! Você completou o curso. Aqui está seu certificado."
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variables": [],
+  "edges": [
+    {
+      "id": "edge1",
+      "from": {
+        "eventId": "startEvent"
+      },
+      "to": {
+        "blockId": "menuBlock"
+      }
+    },
+    {
+      "id": "edge2",
+      "from": {
+        "blockId": "menuBlock"
+      },
+      "to": {
+        "blockId": "choiceBlock"
+      }
+    },
+    {
+      "id": "edge3",
+      "from": {
+        "blockId": "choiceBlock",
+        "itemId": "moduleOption"
+      },
+      "to": {
+        "blockId": "moduleBlock"
+      }
+    },
+    {
+      "id": "edge4",
+      "from": {
+        "blockId": "choiceBlock",
+        "itemId": "quizOption"
+      },
+      "to": {
+        "blockId": "quizBlock"
+      }
+    },
+    {
+      "id": "edge5",
+      "from": {
+        "blockId": "choiceBlock",
+        "itemId": "certificateOption"
+      },
+      "to": {
+        "blockId": "certificateBlock"
+      }
+    },
+    {
+      "id": "edge6",
+      "from": {
+        "blockId": "moduleBlock"
+      },
+      "to": {
+        "blockId": "certificateBlock"
+      }
+    },
+    {
+      "id": "edge7",
+      "from": {
+        "blockId": "quizBlock"
+      },
+      "to": {
+        "blockId": "question1Block"
+      }
+    },
+    {
+      "id": "edge8",
+      "from": {
+        "blockId": "question1Block"
+      },
+      "to": {
+        "blockId": "question1Choice"
+      }
+    },
+    {
+      "id": "edge9",
+      "from": {
+        "blockId": "question1Choice",
+        "itemId": "q1Correct"
+      },
+      "to": {
+        "blockId": "question2Block"
+      }
+    },
+    {
+      "id": "edge10",
+      "from": {
+        "blockId": "question1Choice",
+        "itemId": "q1Wrong1"
+      },
+      "to": {
+        "blockId": "question2Block"
+      }
+    },
+    {
+      "id": "edge11",
+      "from": {
+        "blockId": "question1Choice",
+        "itemId": "q1Wrong2"
+      },
+      "to": {
+        "blockId": "question2Block"
+      }
+    },
+    {
+      "id": "edge12",
+      "from": {
+        "blockId": "question2Block"
+      },
+      "to": {
+        "blockId": "question2Choice"
+      }
+    },
+    {
+      "id": "edge13",
+      "from": {
+        "blockId": "question2Choice",
+        "itemId": "q2Correct"
+      },
+      "to": {
+        "blockId": "question3Block"
+      }
+    },
+    {
+      "id": "edge14",
+      "from": {
+        "blockId": "question2Choice",
+        "itemId": "q2Wrong1"
+      },
+      "to": {
+        "blockId": "question3Block"
+      }
+    },
+    {
+      "id": "edge15",
+      "from": {
+        "blockId": "question2Choice",
+        "itemId": "q2Wrong2"
+      },
+      "to": {
+        "blockId": "question3Block"
+      }
+    },
+    {
+      "id": "edge16",
+      "from": {
+        "blockId": "question3Block"
+      },
+      "to": {
+        "blockId": "question3Choice"
+      }
+    },
+    {
+      "id": "edge17",
+      "from": {
+        "blockId": "question3Choice",
+        "itemId": "q3Correct"
+      },
+      "to": {
+        "blockId": "certificateBlock"
+      }
+    },
+    {
+      "id": "edge18",
+      "from": {
+        "blockId": "question3Choice",
+        "itemId": "q3Wrong1"
+      },
+      "to": {
+        "blockId": "certificateBlock"
+      }
+    },
+    {
+      "id": "edge19",
+      "from": {
+        "blockId": "question3Choice",
+        "itemId": "q3Wrong2"
+      },
+      "to": {
+        "blockId": "certificateBlock"
+      }
+    }
+  ],
+  "events": [
+    {
+      "id": "startEvent",
+      "type": "start",
+      "outgoingEdgeId": "edge1"
+    }
+  ]
+}

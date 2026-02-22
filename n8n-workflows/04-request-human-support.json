@@ -6,7 +6,10 @@
       "name": "Webhook request-human-support",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [100, 300],
+      "position": [
+        100,
+        300
+      ],
       "parameters": {
         "httpMethod": "POST",
         "path": "request-human-support",
@@ -20,10 +23,35 @@
       "name": "Pausar bot e criar sessão",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
-      "position": [300, 300],
+      "position": [
+        300,
+        300
+      ],
       "parameters": {
         "operation": "executeQuery",
         "query": "WITH upserted AS (\n  INSERT INTO students (phone, attendance_status)\n  VALUES ('{{ $('Webhook request-human-support').first().json.body.phone }}', 'human')\n  ON CONFLICT (phone) DO UPDATE\n    SET attendance_status = 'human', updated_at = NOW()\n  RETURNING id\n)\nINSERT INTO handoff_control (phone, status, last_handoff)\nVALUES ('{{ $('Webhook request-human-support').first().json.body.phone }}', 'human', NOW())\nON CONFLICT (phone) DO UPDATE SET status = 'human', last_handoff = NOW();\n\nWITH student AS (\n  SELECT id FROM students WHERE phone = '{{ $('Webhook request-human-support').first().json.body.phone }}'\n)\nINSERT INTO support_sessions (student_id, reason)\nSELECT id, '{{ ($('Webhook request-human-support').first().json.body.reason ?? 'Solicitação via bot') | replace(\"'\", \"''\") }}'\nFROM student",
+        "options": {}
+      },
+      "credentials": {
+        "postgres": {
+          "id": "lJaeEy4CpHbhgMAp",
+          "name": "Kreativ PostgreSQL"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "pg-get-student",
+      "name": "Buscar Dados do Aluno",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        500,
+        300
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT s.name, s.email, s.current_module, c.name as course_name \nFROM students s \nLEFT JOIN courses c ON c.id = s.course_id \nWHERE s.phone = '{{ $('Webhook request-human-support').first().json.body.phone }}'\nLIMIT 1",
         "options": {}
       },
       "credentials": {
@@ -39,7 +67,10 @@
       "name": "Buscar Contato Chatwoot",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [500, 300],
+      "position": [
+        500,
+        300
+      ],
       "parameters": {
         "method": "GET",
         "url": "http://kreativ_chatwoot_app:3000/api/v1/accounts/2/contacts/search",
@@ -69,7 +100,10 @@
       "name": "Contato existe?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [700, 300],
+      "position": [
+        700,
+        300
+      ],
       "parameters": {
         "conditions": {
           "options": {
@@ -99,13 +133,42 @@
       "name": "Criar Contato",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [900, 400],
+      "position": [
+        1100,
+        400
+      ],
       "parameters": {
         "method": "POST",
         "url": "http://kreativ_chatwoot_app:3000/api/v1/accounts/2/contacts",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ name: $('Webhook request-human-support').first().json.body.phone, phone_number: '+' + $('Webhook request-human-support').first().json.body.phone }) }}",
+        "jsonBody": "={{ JSON.stringify({\n  name: $('Buscar Dados do Aluno').first().json.name || $('Webhook request-human-support').first().json.body.phone,\n  phone_number: '+' + $('Webhook request-human-support').first().json.body.phone,\n  custom_attributes: {\n    course: $('Buscar Dados do Aluno').first().json.course_name || 'N/A',\n    current_module: $('Buscar Dados do Aluno').first().json.current_module || 0\n  }\n}) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "hh5bHLwTRyKoqZzAvaPUUm5v"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "http-update-contact",
+      "name": "Atualizar Contato",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        200
+      ],
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ 'http://kreativ_chatwoot_app:3000/api/v1/accounts/2/contacts/' + $json.payload[0].id }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  name: $('Buscar Dados do Aluno').first().json.name || $('Webhook request-human-support').first().json.body.phone,\n  custom_attributes: {\n    course: $('Buscar Dados do Aluno').first().json.course_name || 'N/A',\n    current_module: $('Buscar Dados do Aluno').first().json.current_module || 0\n  }\n}) }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -122,7 +185,10 @@
       "name": "Unir dados contato",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1100, 300],
+      "position": [
+        1100,
+        300
+      ],
       "parameters": {
         "jsCode": "const input = $input.item.json;\nlet contactId = null;\nif (input.id) {\n  contactId = input.id;\n} else if (input.payload && input.payload.contact) {\n  contactId = input.payload.contact.id;\n} else if (input.payload && Array.isArray(input.payload) && input.payload.length > 0) {\n  contactId = input.payload[0].id;\n}\nconst phone = $('Webhook request-human-support').first().json.body.phone;\nreturn [{ json: { contactId, phone } }];"
       }
@@ -132,7 +198,10 @@
       "name": "Checar Conversa Aberta",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1300, 300],
+      "position": [
+        1300,
+        300
+      ],
       "parameters": {
         "method": "GET",
         "url": "={{ 'http://kreativ_chatwoot_app:3000/api/v1/accounts/2/contacts/' + $json.contactId + '/conversations' }}",
@@ -155,7 +224,10 @@
       "name": "Tem conversa aberta?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1500, 300],
+      "position": [
+        1500,
+        300
+      ],
       "parameters": {
         "conditions": {
           "conditions": [
@@ -177,7 +249,10 @@
       "name": "Criar Conversa",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1700, 400],
+      "position": [
+        1700,
+        400
+      ],
       "parameters": {
         "method": "POST",
         "url": "http://kreativ_chatwoot_app:3000/api/v1/accounts/2/conversations",
@@ -200,7 +275,10 @@
       "name": "Definir Conversa ID",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1900, 300],
+      "position": [
+        1900,
+        300
+      ],
       "parameters": {
         "jsCode": "const input = $input.item.json;\nconst checkConvNode = $('Checar Conversa Aberta').first().json.payload;\nlet id = null;\nif (input.id) {\n  id = input.id;\n} else if (checkConvNode && checkConvNode.length > 0) {\n  const open = checkConvNode.find(c => c.status === 'open');\n  if (open) id = open.id;\n}\nconst phone = $('Unir dados contato').first().json.phone;\nreturn [{ json: { id, phone } }];"
       }
@@ -210,13 +288,16 @@
       "name": "Enviar Mensagem Inicial",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [2100, 300],
+      "position": [
+        2300,
+        300
+      ],
       "parameters": {
         "method": "POST",
         "url": "={{ 'http://kreativ_chatwoot_app:3000/api/v1/accounts/2/conversations/' + $json.id + '/messages' }}",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ content: '🚨 SOLICITAÇÃO DE TUTOR\\nMotivo: ' + ($('Webhook request-human-support').first().json.body.reason || 'Solicitação via bot'), message_type: 'incoming', private: false }) }}",
+        "jsonBody": "={{ JSON.stringify({ \n  content: '🚨 *SOLICITAÇÃO DE TUTOR*\\n\\n' + \n           '👤 *Aluno:* ' + ($('Buscar Dados do Aluno').first().json.name || 'Desconhecido') + '\\n' + \n           '📚 *Curso:* ' + ($('Buscar Dados do Aluno').first().json.course_name || 'Não vinculado') + '\\n' + \n           '📖 *Módulo:* ' + ($('Buscar Dados do Aluno').first().json.current_module || '0') + '\\n' + \n           '💬 *Motivo:* ' + ($('Webhook request-human-support').first().json.body.reason || 'Solicitação via bot'), \n  message_type: 'incoming', \n  private: false \n}) }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -233,7 +314,10 @@
       "name": "Label: aguardando-tutor",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [2300, 300],
+      "position": [
+        2300,
+        300
+      ],
       "parameters": {
         "method": "POST",
         "url": "http://kreativ_n8n:5678/webhook/update-chatwoot-label",
@@ -249,43 +333,161 @@
   ],
   "connections": {
     "Webhook request-human-support": {
-      "main": [[{ "node": "Pausar bot e criar sessão", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Pausar bot e criar sessão",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Pausar bot e criar sessão": {
-      "main": [[{ "node": "Buscar Contato Chatwoot", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Buscar Dados do Aluno",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Dados do Aluno": {
+      "main": [
+        [
+          {
+            "node": "Buscar Contato Chatwoot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Buscar Contato Chatwoot": {
-      "main": [[{ "node": "Contato existe?", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Contato existe?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Contato existe?": {
       "main": [
-        [{ "node": "Unir dados contato", "type": "main", "index": 0 }],
-        [{ "node": "Criar Contato", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Atualizar Contato",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Criar Contato",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Atualizar Contato": {
+      "main": [
+        [
+          {
+            "node": "Unir dados contato",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Criar Contato": {
-      "main": [[{ "node": "Unir dados contato", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Unir dados contato",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Unir dados contato": {
-      "main": [[{ "node": "Checar Conversa Aberta", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Checar Conversa Aberta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Checar Conversa Aberta": {
-      "main": [[{ "node": "Tem conversa aberta?", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Tem conversa aberta?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Tem conversa aberta?": {
       "main": [
-        [{ "node": "Definir Conversa ID", "type": "main", "index": 0 }],
-        [{ "node": "Criar Conversa", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Definir Conversa ID",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Criar Conversa",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Criar Conversa": {
-      "main": [[{ "node": "Definir Conversa ID", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Definir Conversa ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Definir Conversa ID": {
-      "main": [[{ "node": "Enviar Mensagem Inicial", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Enviar Mensagem Inicial",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Enviar Mensagem Inicial": {
-      "main": [[{ "node": "Label: aguardando-tutor", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Label: aguardando-tutor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {

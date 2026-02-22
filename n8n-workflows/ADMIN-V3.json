@@ -1,0 +1,176 @@
+{
+  "name": "Kreativ Admin API V3",
+  "nodes": [
+    {
+      "id": "wh-admin",
+      "name": "Webhook Admin",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        100,
+        300
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "kreativ-admin-api",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "kreativ-admin-api-id"
+    },
+    {
+      "id": "sw-admin",
+      "name": "Switch Admin",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        350,
+        300
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ .body.action }}",
+                    "rightValue": "admin_upsert_course",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ .body.action }}",
+                    "rightValue": "admin_upsert_module",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "pg-course",
+      "name": "Upsert Course",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        600,
+        200
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "lJaeEy4CpHbhgMAp",
+          "name": "Kreativ PostgreSQL"
+        }
+      },
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO courses (id, name, slug, area, is_active) VALUES ((SELECT COALESCE(MAX(id), 0) + 1 FROM courses), '{{ ['Webhook Admin'].json.body.name }}', '{{ ['Webhook Admin'].json.body.name.toLowerCase().split(' ').join('-') }}', 'geral', true) ON CONFLICT (slug) DO UPDATE SET name = EXCLUDED.name RETURNING id, name;"
+      }
+    },
+    {
+      "id": "pg-module",
+      "name": "Upsert Module",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        600,
+        450
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "lJaeEy4CpHbhgMAp",
+          "name": "Kreativ PostgreSQL"
+        }
+      },
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO modules (course_int_id, course_id, module_number, title, content_text, is_published, is_active) VALUES ({{ ['Webhook Admin'].json.body.course_id }}, '{{ ['Webhook Admin'].json.body.course_id }}', {{ ['Webhook Admin'].json.body.module_number }}, '{{ ['Webhook Admin'].json.body.title }}', '{{ ['Webhook Admin'].json.body.content.replace(''', ''''') }}', true, true) ON CONFLICT (course_id, module_number) DO UPDATE SET title = EXCLUDED.title, content_text = EXCLUDED.content_text RETURNING id;"
+      }
+    },
+    {
+      "id": "resp-admin",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        850,
+        300
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify() }}"
+      }
+    }
+  ],
+  "connections": {
+    "Webhook Admin": {
+      "main": [
+        [
+          {
+            "node": "Switch Admin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch Admin": {
+      "main": [
+        [
+          {
+            "node": "Upsert Course",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Upsert Module",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert Course": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert Module": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

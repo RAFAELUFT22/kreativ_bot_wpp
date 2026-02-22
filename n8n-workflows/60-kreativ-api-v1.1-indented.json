@@ -1,0 +1,1624 @@
+{
+  "name": "Kreativ: Unified API Router (v1.1 + Chatwoot Fix)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "kreativ-unified-api",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Webhook API",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "kreativ-unified-api-id",
+      "id": "927c8255-de2f-4f4a-83c7-a4c1613829b4"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body || $json;\nconst phone = String(body.phone || '').replace(/\\D/g, '');\nconst action = body.action || 'check_student';\n\nreturn [{ json: { ...body, phone, action } }];"
+      },
+      "name": "Normalizar Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "622603ab-0173-414b-a565-cd5bcb71ba3c"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "check_student",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "request_human",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "get_module",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "get_progress",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "submit_quiz",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "ai_tutor",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "rag_ingest",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "emit_certificate",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "admin_upsert_student",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "admin_reset_student",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "admin_upsert_course",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "admin_upsert_module",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Roteador de A\u00e7\u00f5es",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        448,
+        0
+      ],
+      "id": "174269a8-d98b-4fa3-9371-ef37d3527e27"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT s.id, s.name, s.phone, s.course_id, s.current_module,\n       s.completed_modules, s.portal_token, s.lead_score,\n       c.name as course_name,\n       (SELECT count(*)::int FROM modules WHERE course_int_id = s.course_id AND is_published = TRUE) as total_modules,\n       COALESCE(h.status, s.attendance_status) as status\nFROM students s\nLEFT JOIN courses c ON c.id = s.course_id\nLEFT JOIN handoff_control h ON h.phone = s.phone\nWHERE s.phone = '{{ $json.phone }}'\n   OR (length('{{ $json.phone }}') = 12\n       AND s.phone = concat(left('{{ $json.phone }}', 2), '9', right('{{ $json.phone }}', 10)))\nLIMIT 1",
+        "options": {}
+      },
+      "name": "Check: Buscar Aluno",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        800,
+        -208
+      ],
+      "id": "a2b348f9-bad3-4eeb-bde2-b1a115520890",
+      "credentials": {
+        "postgres": {
+          "id": "lJaeEy4CpHbhgMAp",
+          "name": "Kreativ PostgreSQL"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all();\nconst input = $('Normalizar Input').first().json;\n\nif (!rows || rows.length === 0 || !rows[0].json.id) {\n  return [{ json: { status: 'unknown', phone: input.phone } }];\n}\n\nconst row = rows[0].json;\nconst status = row.status || 'bot';\n\nif (status === 'human') {\n  return [{ json: { status: 'human', phone: input.phone } }];\n}\n\nconst completed = Array.isArray(row.completed_modules) ? row.completed_modules.length : 0;\nconst total = row.total_modules || 1;\nconst pct = Math.round((completed / total) * 100);\nconst is_last_module = row.current_module >= total;\nconst course_completed = completed >= total;\n\nreturn [{ json: {\n  status: 'bot',\n  id: row.id,\n  name: row.name || 'Aluno',\n  student_name: row.name || 'Aluno',\n  first_name: (row.name || 'Aluno').split(' ')[0],\n  phone: row.phone,\n  course_id: row.course_id,\n  course_name: row.course_name,\n  current_module: row.current_module,\n  completed_modules: row.completed_modules || [],\n  total_modules: total,\n  progress_pct: pct,\n  is_last_module,\n  course_completed,\n  portal_token: row.portal_token,\n  lead_score: row.lead_score || 0\n} }];"
+      },
+      "name": "Check: Formatar Resposta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1024,
+        -208
+      ],
+      "id": "96338d2f-7d8d-4f74-a956-71baa51b3389"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO handoff_control (phone, status, last_handoff)\nVALUES ('{{ $json.phone }}', 'human', NOW())\nON CONFLICT (phone) DO UPDATE SET status = 'human', last_handoff = NOW();\n\nUPDATE students SET attendance_status = 'human', updated_at = NOW()\nWHERE phone = '{{ $json.phone }}';\n\nINSERT INTO support_sessions (student_id, reason)\nSELECT id, '{{ ($json.reason || \"Solicita\u00e7\u00e3o via Typebot\") | replace(\"'\", \"''\") }}'\nFROM students\nWHERE phone = '{{ $json.phone }}'\nLIMIT 1;",
+        "options": {}
+      },
+      "name": "Human: Atualizar DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        800,
+        0
+      ],
+      "id": "0f21eb0d-4068-459f-b38c-88a19e86d625",
+      "credentials": {
+        "postgres": {
+          "id": "lJaeEy4CpHbhgMAp",
+          "name": "Kreativ PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://kreativ_evolution:8080/typebot/changeStatus/europs",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.EVOLUTION_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  remoteJid: $json.phone + \"@s.whatsapp.net\",\n  status: \"paused\"\n}) }}",
+        "options": {}
+      },
+      "name": "Human: Pausar Typebot",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1248,
+        0
+      ],
+      "id": "6aac5b38-7293-4ab1-8b12-b68088b30068"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { success: true, message: 'Tutor solicitado e bot pausado' } }];"
+      },
+      "name": "Human: Finalizar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1472,
+        0
+      ],
+      "id": "3e0b5f8b-6ae0-4380-b35e-995464a65982"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT m.id, m.module_number, m.title, m.description, m.content_text,\n       m.quiz_questions, m.passing_score, m.media_urls,\n       (SELECT count(*)::int FROM modules\n        WHERE course_int_id = s.course_id\n          AND is_published = TRUE) as total_modules\nFROM students s\nJOIN modules m ON m.course_int_id = s.course_id\n  AND m.module_number = {{ $json.module_number || 1 }}\n  AND m.is_published = TRUE\nWHERE s.phone = '{{ $json.phone }}'\nLIMIT 1",
+        "options": {}
+      },
+      "name": "Module: Buscar Dados",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        800,
+        208
+      ],
+      "id": "47b687cd-36c3-4379-ace7-79f77e06bcbd",
+      "credentials": {
+        "postgres": {
+          "id": "lJaeEy4CpHbhgMAp",
+          "name": "Kreativ PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const row = $json;\nif (!row.id) return [{ json: { error: 'M\u00f3dulo n\u00e3o encontrado', skip_ai: true } }];\n\nconst systemPrompt = `Voc\u00ea \u00e9 um instrutor da Kreativ Educa\u00e7\u00e3o.\\nBaseado no CONTE\u00daDO DO M\u00d3DULO abaixo, gere 3 perguntas discursivas para avaliar o conhecimento do aluno.\\n\\nRegras:\\n1. Retorne APENAS um JSON no formato: [{\"question\": \"pergunta 1\"}, {\"question\": \"pergunta 2\"}, {\"question\": \"pergunta 3\"}]\\n2. Perguntas devem ser curtas e diretas em portugu\u00eas.\\n3. N\u00c3O adicione texto explicativo fora do JSON.`;\n\nconst userMsg = `M\u00d3DULO: ${row.title}\\nCONTE\u00daDO: ${row.content_text}`;\n\nreturn [{ json: {\n  ...row,\n  skip_ai: false,\n  dsModel: 'deepseek-chat',\n  dsMessages: [\n    { role: 'system', content: systemPrompt },\n    { role: 'user', content: userMsg }\n  ]\n} }];"
+      },
+      "name": "Module: Prompt AI Quiz",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1024,
+        208
+      ],
+      "id": "b795b88e-98a9-47fe-9ba6-01bbb559eec0"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.deepseek.com/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.DEEPSEEK_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { model: $json.dsModel, messages: $json.dsMessages, temperature: 0.5, response_format: { type: 'json_object' } } }}",
+        "options": {}
+      },
+      "name": "Module: DeepSeek Generate Quiz",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1248,
+        208
+      ],
+      "id": "cff75904-640e-4670-99e7-697b2cd5d768",
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const row = $('Module: Prompt AI Quiz').first().json;\nconst aiRaw = $json;\n\nlet quiz_questions = [];\ntry {\n  const content = aiRaw.choices[0].message.content;\n  const parsed = JSON.parse(content);\n  quiz_questions = Array.isArray(parsed) ? parsed : (parsed.questions || []);\n} catch (e) {\n  quiz_questions = [\n    { question: 'O que voc\u00ea aprendeu de mais importante neste m\u00f3dulo?' },\n    { question: 'Como voc\u00ea aplicaria este conhecimento na pr\u00e1tica?' },\n    { question: 'Quais d\u00favidas ainda restam sobre o conte\u00fado?' }\n  ];\n}\n\nconst contentStr = row.content_text || '';\n\nreturn [{ json: {\n  module_number: row.module_number,\n  title: row.title,\n  description: row.description,\n  content_text: contentStr,\n  passing_score: row.passing_score || 70,\n  total_modules: row.total_modules || 1,\n  quiz_questions,\n  total_questions: quiz_questions.length,\n  question_1: (quiz_questions[0] || {}).question || '',\n  question_2: (quiz_questions[1] || {}).question || '',\n  question_3: (quiz_questions[2] || {}).question || ''\n} }];"
+      },
+      "name": "Module: Finalizar Dados",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1472,
+        208
+      ],
+      "id": "5d1c8ecc-a03f-4f6d-804b-915d37211b72"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT s.name, s.phone, s.current_module, s.completed_modules,\n       s.portal_token, c.name as course_name,\n       (SELECT count(*)::int FROM modules WHERE course_int_id = s.course_id AND is_published = TRUE) as total_modules,\n       to_char(s.created_at, 'DD/MM/YYYY') as enrolled_at\nFROM students s\nLEFT JOIN courses c ON c.id = s.course_id\nWHERE s.phone = '{{ $json.phone }}'\nLIMIT 1",
+        "options": {}
+      },
+      "name": "Progress: Buscar DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        800,
+        400
+      ],
+      "id": "01746bd5-dee1-47be-9193-896bf5b6a5fc",
+      "credentials": {
+        "postgres": {
+          "id": "lJaeEy4CpHbhgMAp",
+          "name": "Kreativ PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const row = $json;\nif (!row.name) return [{ json: { error: 'Aluno n\u00e3o encontrado' } }];\n\nconst completed = Array.isArray(row.completed_modules) ? row.completed_modules.length : 0;\nconst total = row.total_modules || 1;\nconst pct = Math.round((completed / total) * 100);\n\nreturn [{ json: {\n  ...row,\n  student_name: row.name,\n  completed_count: completed,\n  completion_pct: pct,\n  progress_pct: pct\n} }];"
+      },
+      "name": "Progress: Calcular",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1024,
+        400
+      ],
+      "id": "15be7269-bce7-4304-b55a-49b6c66bd79e"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://kreativ_n8n:5678/webhook/ai-tutor-v3",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { phone: $json.phone, body: $json.message || $json.body || 'Oi' } }}",
+        "options": {}
+      },
+      "name": "AI Tutor: Proxy Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        800,
+        800
+      ],
+      "id": "c54510b0-9118-4043-981f-ef3ed8d665a7"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.fileUrl }}",
+        "options": {}
+      },
+      "name": "RAG: Download PDF",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        800,
+        1008
+      ],
+      "id": "4def6547-32fd-4b26-896f-2d96a1cef8f6"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "name": "RAG: Extrair Texto",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        1024,
+        1008
+      ],
+      "id": "b4e6b872-d645-42b7-ae54-0e9abe30fc3d"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://kreativ_n8n:5678/webhook/rag-ingest",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { content: $json.text, fileName: \"upload_via_bot.pdf\", course_int_id: $('Normalizar Input').first().json.course_id || 19 } }}",
+        "options": {}
+      },
+      "name": "RAG: Ingerir no DB",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1248,
+        1008
+      ],
+      "id": "07b1239a-bfdf-4e96-8535-4761f0eb0e00"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { success: true, message: 'PDF processado e ingerido com sucesso no banco de conhecimento.' } }];"
+      },
+      "name": "Finalizar A\u00e7\u00e3o",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1472,
+        800
+      ],
+      "id": "f48f3da5-bb3a-4d91-83e0-8f60132469ad"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "name": "Responder Typebot",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1808,
+        208
+      ],
+      "id": "49114b88-de38-4c8b-80d6-0ab092a4eff1"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT m.module_number, m.title, m.content_text, m.passing_score,\n       (SELECT count(*)::int FROM modules WHERE course_int_id = s.course_id AND is_published = TRUE) as total_modules\nFROM students s\nJOIN modules m ON m.course_int_id = s.course_id AND m.module_number = {{ $json.module_number || 1 }}\nWHERE s.phone = '{{ $json.phone }}'\nLIMIT 1",
+        "options": {}
+      },
+      "name": "Quiz: Buscar Contexto",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        800,
+        608
+      ],
+      "id": "a79505b0-604e-40dd-9981-5ece259f84c5",
+      "credentials": {
+        "postgres": {
+          "id": "lJaeEy4CpHbhgMAp",
+          "name": "Kreativ PostgreSQL"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $('Normalizar Input').first().json;\nconst ctx = $json;\n\nconst sysPrompt = `Voc\u00ea \u00e9 um avaliador pedag\u00f3gico da Kreativ Educa\u00e7\u00e3o.\nAvalie as respostas do aluno ao m\u00f3dulo \"${ctx.title}\".\n\nCrit\u00e9rios:\n- Analise a compreens\u00e3o dos conceitos\n- Atribua score de 0 a 100\n- Feedback construtivo em portugu\u00eas (m\u00e1ximo 3 frases)\n- Se o aluno n\u00e3o soube responder, incentive a revis\u00e3o\n\nRetorne APENAS JSON: {\"score\": n\u00famero, \"feedback\": \"texto\"}`;\n\nconst userMsg = [\n  `P1: ${input.question_1}\\nR1: ${input.answer_1 || '(sem resposta)'}`,\n  `P2: ${input.question_2}\\nR2: ${input.answer_2 || '(sem resposta)'}`,\n  `P3: ${input.question_3}\\nR3: ${input.answer_3 || '(sem resposta)'}`\n].join('\\n\\n');\n\nreturn [{ json: {\n  ...ctx,\n  input,\n  dsMessages: [\n    { role: 'system', content: sysPrompt },\n    { role: 'user', content: userMsg }\n  ]\n} }];"
+      },
+      "name": "Quiz: Prompt Avaliar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1024,
+        608
+      ],
+      "id": "750be081-f261-4610-9aeb-f3994f14e1ed"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.deepseek.com/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.DEEPSEEK_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { model: 'deepseek-chat', messages: $json.dsMessages, temperature: 0.3, response_format: { type: 'json_object' } } }}",
+        "options": {}
+      },
+      "name": "Quiz: DeepSeek Avaliar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1248,
+        608
+      ],
+      "id": "cf14896b-a631-499d-925a-a34a5011090a",
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const ctx = $('Quiz: Prompt Avaliar').first().json;\nconst aiRaw = $json;\n\nlet score = 50, feedback = 'Suas respostas foram recebidas! Continue revisando o conte\u00fado.';\ntry {\n  const content = aiRaw.choices[0].message.content;\n  const parsed = JSON.parse(content.replace(/```json|```/g, '').trim());\n  score = parsed.score || 50;\n  feedback = parsed.feedback || feedback;\n} catch (e) { /* fallback */ }\n\nconst passing_score = ctx.passing_score || 70;\nconst passed = score >= passing_score;\nconst module_number = parseInt(ctx.input.module_number || 1);\nconst total_modules = ctx.total_modules || 1;\nconst is_last_module = module_number >= total_modules;\nconst next_module = is_last_module ? null : module_number + 1;\n\nreturn [{ json: {\n  phone: ctx.input.phone,\n  module_number,\n  score,\n  feedback,\n  passed,\n  passing_score,\n  module_complete: passed,\n  is_last_module,\n  next_module,\n  total_modules\n} }];"
+      },
+      "name": "Quiz: Processar Resultado",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1472,
+        608
+      ],
+      "id": "ad372f22-1ed6-4057-8422-f317b35aa3a4"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE students SET\n  scores = COALESCE(scores, '{}') || jsonb_build_object('module_{{ $json.module_number }}', {{ $json.score }}::int),\n  completed_modules = CASE\n    WHEN '{{ $json.passed }}'='true' AND NOT ({{ $json.module_number }}::int = ANY(COALESCE(completed_modules, '{}'::int[])))\n    THEN array_append(COALESCE(completed_modules, '{}'::int[]), {{ $json.module_number }}::int)\n    ELSE COALESCE(completed_modules, '{}'::int[])\n  END,\n  current_module = CASE\n    WHEN '{{ $json.passed }}'='true' AND '{{ $json.is_last_module }}'='false'\n    THEN {{ $json.next_module || $json.module_number }}::int\n    ELSE current_module\n  END,\n  updated_at = NOW()\nWHERE phone = '{{ $json.phone }}' RETURNING *",
+        "options": {}
+      },
+      "name": "Quiz: Atualizar Progresso",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1680,
+        608
+      ],
+      "id": "08162ac5-7196-42c8-a24a-b0618478e6ff",
+      "credentials": {
+        "postgres": {
+          "id": "lJaeEy4CpHbhgMAp",
+          "name": "Kreativ PostgreSQL"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO certificates (student_id, course_id, module_number, module_name, verification_code)\nSELECT s.id, s.course_id::text, {{ $json.module_number || 1 }}::int,\n       m.title, encode(gen_random_bytes(12), 'hex')\nFROM students s\nJOIN modules m ON m.course_int_id = s.course_id AND m.module_number = {{ $json.module_number || 1 }}\nWHERE s.phone = '{{ $json.phone }}'\nON CONFLICT DO NOTHING\nRETURNING id::text, verification_code, module_name",
+        "options": {}
+      },
+      "name": "Cert: Inserir DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        800,
+        800
+      ],
+      "id": "cd70cc07-5b60-471a-b3db-12531906fc98",
+      "credentials": {
+        "postgres": {
+          "id": "lJaeEy4CpHbhgMAp",
+          "name": "Kreativ PostgreSQL"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all();\nconst input = $('Normalizar Input').first().json;\nif (!rows || !rows[0]?.json?.id) {\n  // Query the existing cert\n  return [{ json: { error: 'Certificado n\u00e3o encontrado ou j\u00e1 emitido', success: false } }];\n}\nconst cert = rows[0].json;\nconst certUrl = `https://portal.extensionista.site/certificado/${cert.verification_code}`;\nreturn [{ json: {\n  success: true,\n  cert_id: cert.id,\n  cert_url: certUrl,\n  verification_code: cert.verification_code,\n  module_name: cert.module_name\n} }];"
+      },
+      "name": "Cert: Formatar URL",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1024,
+        800
+      ],
+      "id": "3a6825af-7bce-4e1b-8939-0687a872ff16"
+    },
+    {
+      "parameters": {
+        "url": "={{ 'http://kreativ_chatwoot_app:3000/api/v1/accounts/2/contacts/search?q=' + $('Normalizar Input').first().json.phone }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "={{ $json.phone }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "hh5bHLwTRyKoqZzAvaPUUm5v"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Human: CW Search Contact",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1024,
+        -96
+      ],
+      "id": "0a82de78-429e-44db-a2de-9d8c61fe0d7d"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.payload && $json.payload.length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "Human: IF Contact Exists",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1248,
+        -96
+      ],
+      "id": "9c01d871-bb00-44c5-a4bc-e033c7fc4646"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://kreativ_chatwoot_app:3000/api/v1/accounts/2/contacts",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "hh5bHLwTRyKoqZzAvaPUUm5v"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  phone_number: '+' + $('Normalizar Input').first().json.phone,\n  name: $('Normalizar Input').first().json.phone\n}) }}",
+        "options": {}
+      },
+      "name": "Human: CW Create Contact",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1472,
+        0
+      ],
+      "id": "639160b0-33ca-4e1c-952c-25ed447667e1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.item.json;\nconst norm = $('Normalizar Input').first().json;\nconst phone = norm.phone;\nconst reason = norm.reason || 'Solicita\u00e7\u00e3o via bot';\n\nlet contactId = null;\nif (input.payload && input.payload.contact) {\n  contactId = input.payload.contact.id;\n} else if (input.payload && Array.isArray(input.payload) && input.payload.length > 0) {\n  contactId = input.payload[0].id;\n}\nreturn [{ json: { contactId, phone, reason } }];"
+      },
+      "name": "Human: CW Merge Contact",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        -96
+      ],
+      "id": "42e30dc7-26b8-456b-946a-cf4322d8c155"
+    },
+    {
+      "parameters": {
+        "url": "={{ 'http://kreativ_chatwoot_app:3000/api/v1/accounts/2/contacts/' + $json.contactId + '/conversations' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "hh5bHLwTRyKoqZzAvaPUUm5v"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Human: CW Check Conv",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1904,
+        -96
+      ],
+      "id": "075bcd6b-b858-42ff-83b2-d1bf149f63f0"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": 0,
+              "rightValue": 1,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "Human: IF Conv Exists",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2128,
+        -96
+      ],
+      "id": "e0355cac-be27-44f2-8da7-9604d132f9f2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://kreativ_chatwoot_app:3000/api/v1/accounts/2/conversations",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "hh5bHLwTRyKoqZzAvaPUUm5v"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ contact_id: $('Human: CW Merge Contact').first().json.contactId, inbox_id: 1, status: 'open' }) }}",
+        "options": {}
+      },
+      "name": "Human: CW Create Conv",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2352,
+        0
+      ],
+      "id": "561d7231-8b19-45bf-bb59-4416cd3a5916"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.item.json;\nconst norm = $('Normalizar Input').first().json;\nconst phone = norm.phone;\nconst reason = norm.reason || 'Solicita\u00e7\u00e3o via bot';\n\nconst checkConvNode = $('Human: CW Check Conv').first().json.payload;\nlet id = null;\nif (input.payload && input.payload.id) {\n  id = input.payload.id;\n} else if (input.id) {\n  id = input.id;\n} else if (checkConvNode && checkConvNode.length > 0) {\n  const open = checkConvNode.find(c => c.status === 'open');\n  if (open) id = open.id;\n}\nreturn [{ json: { convId: id, reason, phone } }];"
+      },
+      "name": "Human: CW Merge Conv",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2560,
+        -96
+      ],
+      "id": "43607192-c301-47ce-a3e4-b2bbeda15bb6"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'http://kreativ_chatwoot_app:3000/api/v1/accounts/2/conversations/' + $json.convId + '/messages' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "hh5bHLwTRyKoqZzAvaPUUm5v"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  content: '\ud83d\udea8 SOLICITA\u00c7\u00c3O DE SUPORTE\\nMotivo: ' + $('Normalizar Input').first().json.reason,\n  message_type: 'incoming',\n  private: false\n}) }}",
+        "options": {}
+      },
+      "name": "Human: CW Send Msg",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2784,
+        -96
+      ],
+      "id": "45088bdc-7625-47a7-8821-816a39a41b7e"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://kreativ_n8n:5678/webhook/update-chatwoot-label",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ phone: $('Human: CW Merge Conv').first().json.phone, label: 'aguardando-tutor' }) }}",
+        "options": {
+          "timeout": 3000
+        }
+      },
+      "name": "Human: CW Set Label",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3008,
+        -96
+      ],
+      "id": "a283c970-9ff0-4a09-8588-bc643119e8d6",
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, message: 'Suporte humano acionado com sucesso.' }) }}",
+        "options": {}
+      },
+      "name": "Human: Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        3232,
+        -96
+      ],
+      "id": "human-resp-node-id"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO students (phone, name, course_id, current_module, attendance_status)\nVALUES ('{{ $json.phone }}', '{{ $json.name }}', {{ $json.course_id }}, 1, 'bot')\nON CONFLICT (phone) DO UPDATE SET\n  name = EXCLUDED.name,\n  course_id = EXCLUDED.course_id,\n  updated_at = NOW()\nRETURNING id, phone, name;",
+        "options": {}
+      },
+      "name": "Admin: Upsert Student",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        800,
+        1008
+      ],
+      "id": "admin-upsert-student-id",
+      "credentials": {
+        "postgres": {
+          "id": "lJaeEy4CpHbhgMAp",
+          "name": "Kreativ PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE students\nSET current_module = 1, completed_modules = '{}', updated_at = NOW()\nWHERE phone = '{{ $json.phone }}'\nRETURNING id, name, phone;",
+        "options": {}
+      },
+      "name": "Admin: Reset Student",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        800,
+        1200
+      ],
+      "id": "admin-reset-student-id",
+      "credentials": {
+        "postgres": {
+          "id": "lJaeEy4CpHbhgMAp",
+          "name": "Kreativ PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO courses (id, name, slug, area, is_active) \nVALUES ((SELECT COALESCE(MAX(id), 0) + 1 FROM courses), '{{ $json.name }}', '{{ $json.name.toLowerCase().replace(/ /g, \"-\") }}', '{{ $json.area || \"geral\" }}', true)\nON CONFLICT (slug) DO UPDATE SET \n  name = EXCLUDED.name, \n  updated_at = NOW()\nRETURNING id, name;",
+        "options": {}
+      },
+      "name": "Admin: Upsert Course",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        800,
+        1400
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "lJaeEy4CpHbhgMAp",
+          "name": "Kreativ PostgreSQL"
+        }
+      },
+      "id": "admin-upsert-course-id"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "\nINSERT INTO modules (course_int_id, course_id, module_number, title, description, content_text, passing_score, is_published)\nSELECT \n  COALESCE(NULLIF('{{$json.course_int_id}}', '')::int, (SELECT id FROM courses WHERE slug = '{{$json.course_id}}' LIMIT 1)),\n  '{{$json.course_id}}',\n  {{$json.module_number}},\n  '{{$json.title}}',\n  '{{$json.description}}',\n  '{{($json.content || \"\") | replace(\"'\", \"''\")}}',\n  {{$json.passing_score}},\n  true\nON CONFLICT (course_id, module_number) DO UPDATE SET\n  title = EXCLUDED.title,\n  description = EXCLUDED.description,\n  content_text = EXCLUDED.content_text,\n  passing_score = EXCLUDED.passing_score,\n  updated_at = NOW()\nRETURNING id, title;\n",
+        "options": {}
+      },
+      "name": "Admin: Upsert Module",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        800,
+        1600
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "lJaeEy4CpHbhgMAp",
+          "name": "Kreativ PostgreSQL"
+        }
+      },
+      "id": "admin-upsert-module-id"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook API": {
+      "main": [
+        [
+          {
+            "node": "Normalizar Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar Input": {
+      "main": [
+        [
+          {
+            "node": "Roteador de A\u00e7\u00f5es",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Roteador de A\u00e7\u00f5es": {
+      "main": [
+        [
+          {
+            "node": "Check: Buscar Aluno",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Human: Atualizar DB",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Module: Buscar Dados",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Progress: Buscar DB",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Quiz: Buscar Contexto",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Tutor: Proxy Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "RAG: Download PDF",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Cert: Inserir DB",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Admin: Upsert Student",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Admin: Reset Student",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Admin: Upsert Course",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Admin: Upsert Module",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Admin: Upsert Student": {
+      "main": [
+        [
+          {
+            "node": "Responder Typebot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Admin: Reset Student": {
+      "main": [
+        [
+          {
+            "node": "Responder Typebot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check: Buscar Aluno": {
+      "main": [
+        [
+          {
+            "node": "Check: Formatar Resposta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check: Formatar Resposta": {
+      "main": [
+        [
+          {
+            "node": "Responder Typebot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Human: Atualizar DB": {
+      "main": [
+        [
+          {
+            "node": "Human: CW Search Contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Human: Pausar Typebot": {
+      "main": [
+        [
+          {
+            "node": "Human: Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Human: Finalizar": {
+      "main": [
+        [
+          {
+            "node": "Finalizar A\u00e7\u00e3o",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Module: Buscar Dados": {
+      "main": [
+        [
+          {
+            "node": "Module: Prompt AI Quiz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Module: Prompt AI Quiz": {
+      "main": [
+        [
+          {
+            "node": "Module: DeepSeek Generate Quiz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Module: DeepSeek Generate Quiz": {
+      "main": [
+        [
+          {
+            "node": "Module: Finalizar Dados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Module: Finalizar Dados": {
+      "main": [
+        [
+          {
+            "node": "Responder Typebot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Progress: Buscar DB": {
+      "main": [
+        [
+          {
+            "node": "Progress: Calcular",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Progress: Calcular": {
+      "main": [
+        [
+          {
+            "node": "Responder Typebot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Tutor: Proxy Request": {
+      "main": [
+        [
+          {
+            "node": "Responder Typebot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RAG: Download PDF": {
+      "main": [
+        [
+          {
+            "node": "RAG: Extrair Texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RAG: Extrair Texto": {
+      "main": [
+        [
+          {
+            "node": "RAG: Ingerir no DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RAG: Ingerir no DB": {
+      "main": [
+        [
+          {
+            "node": "Finalizar A\u00e7\u00e3o",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Finalizar A\u00e7\u00e3o": {
+      "main": [
+        [
+          {
+            "node": "Responder Typebot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quiz: Buscar Contexto": {
+      "main": [
+        [
+          {
+            "node": "Quiz: Prompt Avaliar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quiz: Prompt Avaliar": {
+      "main": [
+        [
+          {
+            "node": "Quiz: DeepSeek Avaliar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quiz: DeepSeek Avaliar": {
+      "main": [
+        [
+          {
+            "node": "Quiz: Processar Resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quiz: Processar Resultado": {
+      "main": [
+        [
+          {
+            "node": "Quiz: Atualizar Progresso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quiz: Atualizar Progresso": {
+      "main": [
+        [
+          {
+            "node": "Responder Typebot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cert: Inserir DB": {
+      "main": [
+        [
+          {
+            "node": "Cert: Formatar URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cert: Formatar URL": {
+      "main": [
+        [
+          {
+            "node": "Responder Typebot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Human: CW Search Contact": {
+      "main": [
+        [
+          {
+            "node": "Human: IF Contact Exists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Human: IF Contact Exists": {
+      "main": [
+        [
+          {
+            "node": "Human: CW Merge Contact",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Human: CW Create Contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Human: CW Create Contact": {
+      "main": [
+        [
+          {
+            "node": "Human: CW Merge Contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Human: CW Merge Contact": {
+      "main": [
+        [
+          {
+            "node": "Human: CW Check Conv",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Human: CW Check Conv": {
+      "main": [
+        [
+          {
+            "node": "Human: IF Conv Exists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Human: IF Conv Exists": {
+      "main": [
+        [
+          {
+            "node": "Human: CW Merge Conv",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Human: CW Create Conv",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Human: CW Create Conv": {
+      "main": [
+        [
+          {
+            "node": "Human: CW Merge Conv",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Human: CW Merge Conv": {
+      "main": [
+        [
+          {
+            "node": "Human: CW Send Msg",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Human: CW Send Msg": {
+      "main": [
+        [
+          {
+            "node": "Human: CW Set Label",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Human: CW Set Label": {
+      "main": [
+        [
+          {
+            "node": "Human: Pausar Typebot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Admin: Upsert Course": {
+      "main": [
+        [
+          {
+            "node": "Responder Typebot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Admin: Upsert Module": {
+      "main": [
+        [
+          {
+            "node": "Responder Typebot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "0022279a-f195-4b00-93ed-cdf8199b724f",
+  "meta": {
+    "instanceId": "e7a897b7b0c0b28119e87a6be77fddb718fde4ab1ea0da13550c2a318a5bd4b7"
+  },
+  "id": "tOGGjrzk3ZImsK81",
+  "tags": []
+}

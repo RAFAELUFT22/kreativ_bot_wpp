@@ -1,0 +1,80 @@
+{
+  "name": "Kreativ: Admin Dedicated Router",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "kreativ-admin-api",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Webhook Admin",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "id": "node-wh-admin",
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            { "conditions": { "conditions": [{ "leftValue": "={{ $json.body.action }}", "rightValue": "admin_upsert_course", "operator": { "type": "string", "operation": "equals" } }] } },
+            { "conditions": { "conditions": [{ "leftValue": "={{ $json.body.action }}", "rightValue": "admin_upsert_module", "operator": { "type": "string", "operation": "equals" } }] } }
+          ]
+        }
+      },
+      "name": "Switch Admin",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "id": "node-sw-admin",
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO courses (id, name, slug, area, is_active) VALUES ((SELECT COALESCE(MAX(id), 0) + 1 FROM courses), '{{ $node["Webhook Admin"].json.body.name }}', '{{ $node["Webhook Admin"].json.body.name.toLowerCase().replace(/ /g, "-") }}', 'geral', true) ON CONFLICT (slug) DO UPDATE SET name = EXCLUDED.name RETURNING id, name;",
+        "options": {}
+      },
+      "name": "Upsert Course",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "id": "node-db-c",
+      "position": [440, -100],
+      "credentials": { "postgres": { "id": "lJaeEy4CpHbhgMAp", "name": "Kreativ PostgreSQL" } }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO modules (course_int_id, course_id, module_number, title, content_text, is_published, is_active) VALUES ({{ $node["Webhook Admin"].json.body.course_id }}, '{{ $node["Webhook Admin"].json.body.course_id }}', {{ $node["Webhook Admin"].json.body.module_number }}, '{{ $node["Webhook Admin"].json.body.title }}', '{{ $node["Webhook Admin"].json.body.content.replace("'", "''") }}', true, true) ON CONFLICT (course_id, module_number) DO UPDATE SET title = EXCLUDED.title, content_text = EXCLUDED.content_text RETURNING id;",
+        "options": {}
+      },
+      "name": "Upsert Module",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "id": "node-db-m",
+      "position": [440, 100],
+      "credentials": { "postgres": { "id": "lJaeEy4CpHbhgMAp", "name": "Kreativ PostgreSQL" } }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}"
+      },
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "id": "node-resp-admin",
+      "position": [700, 0]
+    }
+  ],
+  "connections": {
+    "Webhook Admin": { "main": [[{ "node": "Switch Admin", "type": "main", "index": 0 }]] },
+    "Switch Admin": { "main": [
+      [{ "node": "Upsert Course", "type": "main", "index": 0 }],
+      [{ "node": "Upsert Module", "type": "main", "index": 0 }]
+    ] },
+    "Upsert Course": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] },
+    "Upsert Module": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}
