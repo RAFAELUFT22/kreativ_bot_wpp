@@ -1,0 +1,1256 @@
+{
+    "updatedAt": "2026-02-22T03:34:42.134Z",
+    "createdAt": "2026-02-19T19:55:48.955Z",
+    "id": "y92mEtPP4nK1p037",
+    "name": "Kreativ: Chatwoot \u2192 Retomar Bot & Treinamento",
+    "description": null,
+    "active": true,
+    "isArchived": false,
+    "nodes": [
+        {
+            "id": "cw-wh",
+            "name": "Webhook Chatwoot",
+            "type": "n8n-nodes-base.webhook",
+            "position": [
+                200,
+                300
+            ],
+            "webhookId": "kreativ-chatwoot-events",
+            "parameters": {
+                "path": "chatwoot-events",
+                "options": {},
+                "httpMethod": "POST",
+                "responseMode": "onReceived"
+            },
+            "typeVersion": 2
+        },
+        {
+            "parameters": {
+                "jsCode": "\n// Extrai campos do payload Chatwoot\nconst body = $input.item.json.body || $input.item.json;\nconst event = body.event;\nconst conv = body.conversation || {};\nconst status = conv.status || body.status;\nconst convId = conv.id || body.id || (body.conversation && body.conversation.id);\n\n// Procura telefone em m\u00faltiplos caminhos poss\u00edveis no payload do Chatwoot\nlet rawPhone = (\n  conv.meta?.sender?.phone_number || \n  body.meta?.sender?.phone_number || \n  body.sender?.phone_number || \n  (body.contact && body.contact.phone_number) ||\n  ''\n).replace(/\\D/g,'').replace(/^\\+/, '');\n\n// Normaliza para incluir o c\u00f3digo do pa\u00eds se faltar\nconst phone = rawPhone.startsWith('55') ? rawPhone : (rawPhone ? '55' + rawPhone : '');\n\nconst messageContent = body.content;\nconst messageType = body.message_type;\nconst assignee = conv.meta?.assignee?.name || body.meta?.assignee?.name;\n\n// Filtro de seguran\u00e7a: se n\u00e3o temos telefone e n\u00e3o \u00e9 um evento que processamos, ignoramos\nif (!phone && event !== 'message_created' && event !== 'conversation_status_changed') {\n  return [];\n}\n\nreturn [{ json: { event, status, phone, convId, assignee, messageContent, messageType, raw: body } }];\n"
+            },
+            "id": "cw-extract",
+            "name": "Extrair Evento",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                420,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "rules": {
+                    "values": [
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "typeValidation": "strict",
+                                    "version": 1
+                                },
+                                "conditions": [
+                                    {
+                                        "id": "r1",
+                                        "leftValue": "={{ $json.event }}",
+                                        "rightValue": "conversation_status_changed",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "equals"
+                                        }
+                                    },
+                                    {
+                                        "id": "r1b",
+                                        "leftValue": "={{ $json.status }}",
+                                        "rightValue": "resolved",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "equals"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": true,
+                            "outputKey": "Resolved"
+                        },
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "typeValidation": "strict",
+                                    "version": 1
+                                },
+                                "conditions": [
+                                    {
+                                        "id": "r2",
+                                        "leftValue": "={{ $json.event }}",
+                                        "rightValue": "conversation_status_changed",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "equals"
+                                        }
+                                    },
+                                    {
+                                        "id": "r3",
+                                        "leftValue": "={{ $json.status }}",
+                                        "rightValue": "open",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "equals"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": true,
+                            "outputKey": "Reaberta"
+                        },
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "typeValidation": "strict",
+                                    "version": 1
+                                },
+                                "conditions": [
+                                    {
+                                        "id": "r4",
+                                        "leftValue": "={{ $json.event }}",
+                                        "rightValue": "message_created",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "equals"
+                                        }
+                                    },
+                                    {
+                                        "id": "r5",
+                                        "leftValue": "={{ $json.messageType }}",
+                                        "rightValue": "outgoing",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "equals"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": true,
+                            "outputKey": "Treinamento"
+                        }
+                    ]
+                },
+                "options": {
+                    "fallbackOutput": "none"
+                }
+            },
+            "id": "cw-switch",
+            "name": "Tipo de Evento",
+            "type": "n8n-nodes-base.switch",
+            "typeVersion": 3,
+            "position": [
+                640,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "executeQuery",
+                "query": "SELECT hc.status as current_status, s.current_module, s.name\nFROM handoff_control hc\nLEFT JOIN students s ON s.phone = hc.phone\nWHERE hc.phone = '{{ $json.phone }}'\nLIMIT 1",
+                "options": {}
+            },
+            "id": "check-idempotency",
+            "name": "Verificar Estado Atual",
+            "type": "n8n-nodes-base.postgres",
+            "typeVersion": 2.6,
+            "position": [
+                860,
+                200
+            ],
+            "credentials": {
+                "postgres": {
+                    "id": "lJaeEy4CpHbhgMAp",
+                    "name": "Kreativ PostgreSQL"
+                }
+            },
+            "continueOnFail": true
+        },
+        {
+            "parameters": {
+                "jsCode": "const rows = $input.all();\nconst phone = $node['Extrair Evento'].json.phone;\nconst currentStatus = rows.length > 0 ? rows[0].json.current_status : null;\nconst currentModule = rows.length > 0 ? rows[0].json.current_module : 1;\n\n// IDEMPOT\u00caNCIA: Se j\u00e1 est\u00e1 em modo 'bot', n\u00e3o processar novamente\n// (Chatwoot pode disparar eventos duplicados)\nif (currentStatus === 'bot') {\n  console.log(`[HANDOFF] Phone ${phone} already 'bot' \u2014 skipping duplicate event`);\n  return []; // para execu\u00e7\u00e3o\n}\n\nreturn [{ json: { phone, currentModule: currentModule || 1 } }];"
+            },
+            "id": "idempotency-check",
+            "name": "Idempot\u00eancia: J\u00e1 \u00e9 Bot?",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1080,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "executeQuery",
+                "query": "BEGIN;\n-- 1. Atualizar students\nUPDATE students\nSET attendance_status = 'bot', updated_at = NOW()\nWHERE phone = '{{ $json.phone }}';\n\n-- 2. Registrar handoff_control (idempotente via ON CONFLICT)\nINSERT INTO handoff_control (phone, status, last_handoff)\nVALUES ('{{ $json.phone }}', 'bot', NOW())\nON CONFLICT (phone) DO UPDATE\n  SET status = 'bot', last_handoff = NOW();\n\n-- 3. Encerrar sess\u00e3o de suporte aberta (se houver)\nUPDATE support_sessions\nSET ended_at = NOW(), bot_resumed = TRUE\nWHERE student_id = (SELECT id FROM students WHERE phone = '{{ $json.phone }}')\n  AND ended_at IS NULL;\n\nCOMMIT;",
+                "options": {}
+            },
+            "id": "cw-resume",
+            "name": "Retomar Bot no DB",
+            "type": "n8n-nodes-base.postgres",
+            "typeVersion": 2.6,
+            "position": [
+                1300,
+                200
+            ],
+            "credentials": {
+                "postgres": {
+                    "id": "lJaeEy4CpHbhgMAp",
+                    "name": "Kreativ PostgreSQL"
+                }
+            },
+            "continueOnFail": true
+        },
+        {
+            "id": "rd-set-bot",
+            "name": "Redis: Set Bot",
+            "type": "n8n-nodes-base.redis",
+            "typeVersion": 1,
+            "position": [
+                1520,
+                200
+            ],
+            "parameters": {
+                "operation": "set",
+                "key": "={{ \"session:\" + $node[\"Extrair Evento\"].json.phone + \":status\" }}",
+                "value": "={{ JSON.stringify({ attendance_status: 'bot', current_module: $node['Idempot\u00eancia: J\u00e1 \u00e9 Bot?'].json.currentModule || 1, resumed_at: new Date().toISOString() }) }}",
+                "expire": 86400
+            },
+            "credentials": {
+                "redis": {
+                    "id": "GDNQ9fUq1chyneTT",
+                    "name": "Kreativ Redis V4"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "operation": "executeQuery",
+                "query": "SELECT s.name, s.phone, s.current_module, s.completed_modules, s.portal_token,\n       c.name as course_name,\n       (SELECT count(*)::int FROM modules WHERE course_int_id = s.course_id AND is_published = TRUE) as total_modules\nFROM students s\nLEFT JOIN courses c ON c.id = s.course_id\nWHERE s.phone = '{{ $node[\"Extrair Evento\"].json.phone }}'\nLIMIT 1",
+                "options": {}
+            },
+            "id": "cw-get-student",
+            "name": "Buscar Estado do Aluno",
+            "type": "n8n-nodes-base.postgres",
+            "typeVersion": 2.6,
+            "position": [
+                1740,
+                200
+            ],
+            "credentials": {
+                "postgres": {
+                    "id": "lJaeEy4CpHbhgMAp",
+                    "name": "Kreativ PostgreSQL"
+                }
+            },
+            "continueOnFail": true
+        },
+        {
+            "parameters": {
+                "jsCode": "const phone = $node['Extrair Evento'].json.phone;\nconst rows = $input.all();\n\nlet name = 'Aluno';\nlet currentModule = 1;\nlet totalModules = 1;\nlet completedModules = [];\nlet courseName = 'Kreativ Educa\u00e7\u00e3o';\nlet portalToken = null;\nlet label = 'em-andamento';\n\nif (rows && rows.length > 0 && rows[0].json.phone) {\n  const s = rows[0].json;\n  name = s.name || 'Aluno';\n  currentModule = s.current_module || 1;\n  totalModules = s.total_modules || 1;\n  completedModules = s.completed_modules || [];\n  courseName = s.course_name || 'Kreativ Educa\u00e7\u00e3o';\n  portalToken = s.portal_token || null;\n}\n\nconst nCompleted = Array.isArray(completedModules) ? completedModules.length : 0;\nconst courseComplete = nCompleted >= totalModules && totalModules > 0;\n\n// Determinar label do Chatwoot p\u00f3s-atendimento\nif (courseComplete) {\n  label = 'concluido';\n} else if (currentModule <= 5) {\n  label = `modulo-${currentModule}`;\n} else {\n  label = 'em-andamento';\n}\n\n// Montar mensagem personalizada por caso\nlet message;\nif (!rows || rows.length === 0 || !rows[0].json.phone) {\n  // Caso 0: Aluno n\u00e3o encontrado no DB\n  message = '\u2705 *Seu atendimento foi encerrado!*\\n\\nPara come\u00e7ar ou retomar o curso, envie *OI*.';\n  label = 'novo-lead';\n} else if (courseComplete) {\n  // Caso 3: Curso completo\n  const portalLink = portalToken\n    ? `\\n\\n\ud83d\udcca Veja seus certificados em:\\nhttps://portal.extensionista.site/aluno/${portalToken}`\n    : '';\n  message = `\u2705 *Atendimento encerrado!* Bom ver voc\u00ea, ${name}! \ud83d\ude0a\\n\\nParab\u00e9ns \u2014 voc\u00ea j\u00e1 concluiu o curso *${courseName}*! \ud83c\udfc6${portalLink}\\n\\nDigite *OI* se precisar de mais alguma coisa.`;\n} else if (nCompleted === 0 && currentModule === 1) {\n  // Caso 1: Aluno n\u00e3o iniciou nenhum m\u00f3dulo\n  message = `\u2705 *Atendimento encerrado!* Ol\u00e1, ${name}! \ud83d\udc4b\\n\\nPara come\u00e7ar seu aprendizado no curso *${courseName}*, responda:\\n\ud83d\udc49 *MODULO* \u2014 acessar o M\u00f3dulo 1\\n\ud83d\udc49 *PROGRESSO* \u2014 ver seu painel`;\n} else {\n  // Caso 2: Aluno em andamento\n  const portalLink = portalToken\n    ? `\\n\\n\ud83d\udcca Acompanhe seu progresso: https://portal.extensionista.site/aluno/${portalToken}`\n    : '';\n  message = `\u2705 *Atendimento encerrado!* Ol\u00e1, ${name}! \ud83d\udc4b\\n\\nPode continuar de onde parou no curso *${courseName}*:\\n\ud83d\udc49 *MODULO* \u2014 continuar no M\u00f3dulo ${currentModule}\\n\ud83d\udc49 *QUIZ* \u2014 refazer a avalia\u00e7\u00e3o do m\u00f3dulo atual\\n\ud83d\udc49 *PROGRESSO* \u2014 ver todo seu andamento${portalLink}`;\n}\n\nreturn [{ json: { phone, message, label } }];"
+            },
+            "id": "cw-build-resume",
+            "name": "Montar Mensagem de Retomada",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1960,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://kreativ_evolution:8080/message/sendText/europs",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "apikey",
+                            "value": "EXr5OuEE2sBMbRo94LtWQfofvEF1gHUM"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ number: $json.phone, text: $json.message }) }}",
+                "options": {
+                    "timeout": 10000
+                }
+            },
+            "id": "cw-send-wa",
+            "name": "Enviar WhatsApp Retomada",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                2180,
+                200
+            ],
+            "continueOnFail": true
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://kreativ_n8n:5678/webhook/update-chatwoot-label",
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ phone: $('Montar Mensagem de Retomada').first().json.phone, label: $('Montar Mensagem de Retomada').first().json.label }) }}",
+                "options": {
+                    "timeout": 3000
+                }
+            },
+            "id": "cw-update-label",
+            "name": "Atualizar Label P\u00f3s-Atendimento",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                2400,
+                200
+            ],
+            "continueOnFail": true
+        },
+        {
+            "parameters": {
+                "operation": "executeQuery",
+                "query": "BEGIN;\nUPDATE students\nSET attendance_status = 'human', updated_at = NOW()\nWHERE phone = '{{ $json.phone }}';\n\nINSERT INTO handoff_control (phone, status, last_handoff)\nVALUES ('{{ $json.phone }}', 'human', NOW())\nON CONFLICT (phone) DO UPDATE\n  SET status = 'human', last_handoff = NOW();\nCOMMIT;",
+                "options": {}
+            },
+            "id": "cw-handoff",
+            "name": "Handoff no DB",
+            "type": "n8n-nodes-base.postgres",
+            "typeVersion": 2.6,
+            "position": [
+                860,
+                400
+            ],
+            "credentials": {
+                "postgres": {
+                    "id": "lJaeEy4CpHbhgMAp",
+                    "name": "Kreativ PostgreSQL"
+                }
+            },
+            "continueOnFail": true
+        },
+        {
+            "id": "rd-set-human",
+            "name": "Redis: Set Human",
+            "type": "n8n-nodes-base.redis",
+            "typeVersion": 1,
+            "position": [
+                1080,
+                400
+            ],
+            "parameters": {
+                "operation": "set",
+                "key": "={{ \"session:\" + $node[\"Extrair Evento\"].json.phone + \":status\" }}",
+                "value": "={{ JSON.stringify({ attendance_status: 'human', handoff_at: new Date().toISOString() }) }}",
+                "expire": 86400
+            },
+            "credentials": {
+                "redis": {
+                    "id": "GDNQ9fUq1chyneTT",
+                    "name": "Kreativ Redis V4"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "method": "GET",
+                "url": "http://kreativ_chatwoot_app:3000/api/v1/accounts/2/conversations/{{ $json.convId }}/messages",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "api_access_token",
+                            "value": "hh5bHLwTRyKoqZzAvaPUUm5v"
+                        }
+                    ]
+                },
+                "options": {
+                    "timeout": 10000
+                }
+            },
+            "id": "get-history",
+            "name": "Buscar Hist\u00f3rico",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                860,
+                540
+            ],
+            "continueOnFail": true
+        },
+        {
+            "parameters": {
+                "jsCode": "const messages = ($json.payload || []);\n// \u00daltimo incoming (aluno) e \u00faltimo outgoing (tutor)\nconst lastIncoming = messages.slice().reverse().find(m => m.message_type === 0 || m.message_type === 'incoming');\nconst lastOutgoing = messages.slice().reverse().find(m => m.message_type === 1 || m.message_type === 'outgoing');\n\nconst phone = $node['Extrair Evento'].json.phone;\nconst convId = $node['Extrair Evento'].json.convId;\n\nif (!lastIncoming || !lastOutgoing) {\n  console.log('[TREINAMENTO] Par Q&A incompleto \u2014 skipping');\n  return [];\n}\n\nreturn [{ json: {\n  question: lastIncoming.content,\n  answer: lastOutgoing.content,\n  phone,\n  conv_id: convId\n} }];"
+            },
+            "id": "extract-pair",
+            "name": "Extrair Par Q&A",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1080,
+                540
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "executeQuery",
+                "query": "INSERT INTO training_memory (question, answer, student_phone, conv_id)\nVALUES ('{{ $json.question.replace(/'/g, \"''\") }}', '{{ $json.answer.replace(/'/g, \"''\") }}', '{{ $json.phone }}', {{ $json.conv_id }})\nON CONFLICT (conv_id) DO NOTHING;",
+                "options": {}
+            },
+            "id": "save-memory",
+            "name": "Salvar Mem\u00f3ria Treino",
+            "type": "n8n-nodes-base.postgres",
+            "typeVersion": 2.6,
+            "position": [
+                1300,
+                540
+            ],
+            "credentials": {
+                "postgres": {
+                    "id": "lJaeEy4CpHbhgMAp",
+                    "name": "Kreativ PostgreSQL"
+                }
+            },
+            "continueOnFail": true
+        }
+    ],
+    "connections": {
+        "Webhook Chatwoot": {
+            "main": [
+                [
+                    {
+                        "node": "Extrair Evento",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Extrair Evento": {
+            "main": [
+                [
+                    {
+                        "node": "Tipo de Evento",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Tipo de Evento": {
+            "main": [
+                [
+                    {
+                        "node": "Verificar Estado Atual",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Handoff no DB",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Buscar Hist\u00f3rico",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Verificar Estado Atual": {
+            "main": [
+                [
+                    {
+                        "node": "Idempot\u00eancia: J\u00e1 \u00e9 Bot?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Idempot\u00eancia: J\u00e1 \u00e9 Bot?": {
+            "main": [
+                [
+                    {
+                        "node": "Retomar Bot no DB",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Retomar Bot no DB": {
+            "main": [
+                [
+                    {
+                        "node": "Redis: Set Bot",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Redis: Set Bot": {
+            "main": [
+                [
+                    {
+                        "node": "Buscar Estado do Aluno",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Buscar Estado do Aluno": {
+            "main": [
+                [
+                    {
+                        "node": "Montar Mensagem de Retomada",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Montar Mensagem de Retomada": {
+            "main": [
+                [
+                    {
+                        "node": "Enviar WhatsApp Retomada",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Enviar WhatsApp Retomada": {
+            "main": [
+                [
+                    {
+                        "node": "Atualizar Label P\u00f3s-Atendimento",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Handoff no DB": {
+            "main": [
+                [
+                    {
+                        "node": "Redis: Set Human",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Buscar Hist\u00f3rico": {
+            "main": [
+                [
+                    {
+                        "node": "Extrair Par Q&A",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Extrair Par Q&A": {
+            "main": [
+                [
+                    {
+                        "node": "Salvar Mem\u00f3ria Treino",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1",
+        "callerPolicy": "workflowsFromSameOwner",
+        "availableInMCP": false,
+        "errorWorkflow": "mFwiM2dZyKeEgKk6"
+    },
+    "staticData": null,
+    "meta": null,
+    "pinData": null,
+    "versionId": "68eb19bc-a5e9-4a0b-8d52-241ce44209d3",
+    "activeVersionId": "68eb19bc-a5e9-4a0b-8d52-241ce44209d3",
+    "versionCounter": 142,
+    "triggerCount": 1,
+    "shared": [
+        {
+            "updatedAt": "2026-02-19T19:55:48.955Z",
+            "createdAt": "2026-02-19T19:55:48.955Z",
+            "role": "workflow:owner",
+            "workflowId": "y92mEtPP4nK1p037",
+            "projectId": "q7Bjn5D4LxM4OjYW",
+            "project": {
+                "updatedAt": "2026-02-17T20:41:01.829Z",
+                "createdAt": "2026-02-17T20:32:16.109Z",
+                "id": "q7Bjn5D4LxM4OjYW",
+                "name": "Rafael da Silva <rafael.luciano@mail.uft.edu.br>",
+                "type": "personal",
+                "icon": null,
+                "description": null,
+                "creatorId": "d7e6ecc8-7259-4124-87c7-29a5f2d233ba"
+            }
+        }
+    ],
+    "tags": [],
+    "activeVersion": {
+        "updatedAt": "2026-02-21T22:25:00.782Z",
+        "createdAt": "2026-02-21T22:25:00.782Z",
+        "versionId": "68eb19bc-a5e9-4a0b-8d52-241ce44209d3",
+        "workflowId": "y92mEtPP4nK1p037",
+        "nodes": [
+            {
+                "id": "cw-wh",
+                "name": "Webhook Chatwoot",
+                "type": "n8n-nodes-base.webhook",
+                "position": [
+                    200,
+                    300
+                ],
+                "webhookId": "kreativ-chatwoot-events",
+                "parameters": {
+                    "path": "chatwoot-events",
+                    "options": {},
+                    "httpMethod": "POST",
+                    "responseMode": "onReceived"
+                },
+                "typeVersion": 2
+            },
+            {
+                "parameters": {
+                    "jsCode": "\n// Extrai campos do payload Chatwoot\nconst body = $input.item.json.body || $input.item.json;\nconst event = body.event;\nconst conv = body.conversation || {};\nconst status = conv.status || body.status;\nconst convId = conv.id || body.id || (body.conversation && body.conversation.id);\n\n// Procura telefone em m\u00faltiplos caminhos poss\u00edveis no payload do Chatwoot\nlet rawPhone = (\n  conv.meta?.sender?.phone_number || \n  body.meta?.sender?.phone_number || \n  body.sender?.phone_number || \n  (body.contact && body.contact.phone_number) ||\n  ''\n).replace(/\\D/g,'').replace(/^\\+/, '');\n\n// Normaliza para incluir o c\u00f3digo do pa\u00eds se faltar\nconst phone = rawPhone.startsWith('55') ? rawPhone : (rawPhone ? '55' + rawPhone : '');\n\nconst messageContent = body.content;\nconst messageType = body.message_type;\nconst assignee = conv.meta?.assignee?.name || body.meta?.assignee?.name;\n\n// Filtro de seguran\u00e7a: se n\u00e3o temos telefone e n\u00e3o \u00e9 um evento que processamos, ignoramos\nif (!phone && event !== 'message_created' && event !== 'conversation_status_changed') {\n  return [];\n}\n\nreturn [{ json: { event, status, phone, convId, assignee, messageContent, messageType, raw: body } }];\n"
+                },
+                "id": "cw-extract",
+                "name": "Extrair Evento",
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    420,
+                    300
+                ]
+            },
+            {
+                "parameters": {
+                    "rules": {
+                        "values": [
+                            {
+                                "conditions": {
+                                    "options": {
+                                        "caseSensitive": true,
+                                        "typeValidation": "strict",
+                                        "version": 1
+                                    },
+                                    "conditions": [
+                                        {
+                                            "id": "r1",
+                                            "leftValue": "={{ $json.event }}",
+                                            "rightValue": "conversation_status_changed",
+                                            "operator": {
+                                                "type": "string",
+                                                "operation": "equals"
+                                            }
+                                        },
+                                        {
+                                            "id": "r1b",
+                                            "leftValue": "={{ $json.status }}",
+                                            "rightValue": "resolved",
+                                            "operator": {
+                                                "type": "string",
+                                                "operation": "equals"
+                                            }
+                                        }
+                                    ],
+                                    "combinator": "and"
+                                },
+                                "renameOutput": true,
+                                "outputKey": "Resolved"
+                            },
+                            {
+                                "conditions": {
+                                    "options": {
+                                        "caseSensitive": true,
+                                        "typeValidation": "strict",
+                                        "version": 1
+                                    },
+                                    "conditions": [
+                                        {
+                                            "id": "r2",
+                                            "leftValue": "={{ $json.event }}",
+                                            "rightValue": "conversation_status_changed",
+                                            "operator": {
+                                                "type": "string",
+                                                "operation": "equals"
+                                            }
+                                        },
+                                        {
+                                            "id": "r3",
+                                            "leftValue": "={{ $json.status }}",
+                                            "rightValue": "open",
+                                            "operator": {
+                                                "type": "string",
+                                                "operation": "equals"
+                                            }
+                                        }
+                                    ],
+                                    "combinator": "and"
+                                },
+                                "renameOutput": true,
+                                "outputKey": "Reaberta"
+                            },
+                            {
+                                "conditions": {
+                                    "options": {
+                                        "caseSensitive": true,
+                                        "typeValidation": "strict",
+                                        "version": 1
+                                    },
+                                    "conditions": [
+                                        {
+                                            "id": "r4",
+                                            "leftValue": "={{ $json.event }}",
+                                            "rightValue": "message_created",
+                                            "operator": {
+                                                "type": "string",
+                                                "operation": "equals"
+                                            }
+                                        },
+                                        {
+                                            "id": "r5",
+                                            "leftValue": "={{ $json.messageType }}",
+                                            "rightValue": "outgoing",
+                                            "operator": {
+                                                "type": "string",
+                                                "operation": "equals"
+                                            }
+                                        }
+                                    ],
+                                    "combinator": "and"
+                                },
+                                "renameOutput": true,
+                                "outputKey": "Treinamento"
+                            }
+                        ]
+                    },
+                    "options": {
+                        "fallbackOutput": "none"
+                    }
+                },
+                "id": "cw-switch",
+                "name": "Tipo de Evento",
+                "type": "n8n-nodes-base.switch",
+                "typeVersion": 3,
+                "position": [
+                    640,
+                    300
+                ]
+            },
+            {
+                "parameters": {
+                    "operation": "executeQuery",
+                    "query": "SELECT hc.status as current_status, s.current_module, s.name\nFROM handoff_control hc\nLEFT JOIN students s ON s.phone = hc.phone\nWHERE hc.phone = '{{ $json.phone }}'\nLIMIT 1",
+                    "options": {}
+                },
+                "id": "check-idempotency",
+                "name": "Verificar Estado Atual",
+                "type": "n8n-nodes-base.postgres",
+                "typeVersion": 2.6,
+                "position": [
+                    860,
+                    200
+                ],
+                "credentials": {
+                    "postgres": {
+                        "id": "lJaeEy4CpHbhgMAp",
+                        "name": "Kreativ PostgreSQL"
+                    }
+                },
+                "continueOnFail": true
+            },
+            {
+                "parameters": {
+                    "jsCode": "const rows = $input.all();\nconst phone = $node['Extrair Evento'].json.phone;\nconst currentStatus = rows.length > 0 ? rows[0].json.current_status : null;\nconst currentModule = rows.length > 0 ? rows[0].json.current_module : 1;\n\n// IDEMPOT\u00caNCIA: Se j\u00e1 est\u00e1 em modo 'bot', n\u00e3o processar novamente\n// (Chatwoot pode disparar eventos duplicados)\nif (currentStatus === 'bot') {\n  console.log(`[HANDOFF] Phone ${phone} already 'bot' \u2014 skipping duplicate event`);\n  return []; // para execu\u00e7\u00e3o\n}\n\nreturn [{ json: { phone, currentModule: currentModule || 1 } }];"
+                },
+                "id": "idempotency-check",
+                "name": "Idempot\u00eancia: J\u00e1 \u00e9 Bot?",
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    1080,
+                    200
+                ]
+            },
+            {
+                "parameters": {
+                    "operation": "executeQuery",
+                    "query": "BEGIN;\n-- 1. Atualizar students\nUPDATE students\nSET attendance_status = 'bot', updated_at = NOW()\nWHERE phone = '{{ $json.phone }}';\n\n-- 2. Registrar handoff_control (idempotente via ON CONFLICT)\nINSERT INTO handoff_control (phone, status, last_handoff)\nVALUES ('{{ $json.phone }}', 'bot', NOW())\nON CONFLICT (phone) DO UPDATE\n  SET status = 'bot', last_handoff = NOW();\n\n-- 3. Encerrar sess\u00e3o de suporte aberta (se houver)\nUPDATE support_sessions\nSET ended_at = NOW(), bot_resumed = TRUE\nWHERE student_id = (SELECT id FROM students WHERE phone = '{{ $json.phone }}')\n  AND ended_at IS NULL;\n\nCOMMIT;",
+                    "options": {}
+                },
+                "id": "cw-resume",
+                "name": "Retomar Bot no DB",
+                "type": "n8n-nodes-base.postgres",
+                "typeVersion": 2.6,
+                "position": [
+                    1300,
+                    200
+                ],
+                "credentials": {
+                    "postgres": {
+                        "id": "lJaeEy4CpHbhgMAp",
+                        "name": "Kreativ PostgreSQL"
+                    }
+                },
+                "continueOnFail": true
+            },
+            {
+                "id": "rd-set-bot",
+                "name": "Redis: Set Bot",
+                "type": "n8n-nodes-base.redis",
+                "typeVersion": 1,
+                "position": [
+                    1520,
+                    200
+                ],
+                "parameters": {
+                    "operation": "set",
+                    "key": "={{ \"session:\" + $node[\"Extrair Evento\"].json.phone + \":status\" }}",
+                    "value": "={{ JSON.stringify({ attendance_status: 'bot', current_module: $node['Idempot\u00eancia: J\u00e1 \u00e9 Bot?'].json.currentModule || 1, resumed_at: new Date().toISOString() }) }}",
+                    "expire": 86400
+                },
+                "credentials": {
+                    "redis": {
+                        "id": "GDNQ9fUq1chyneTT",
+                        "name": "Kreativ Redis V4"
+                    }
+                }
+            },
+            {
+                "parameters": {
+                    "operation": "executeQuery",
+                    "query": "SELECT s.name, s.phone, s.current_module, s.completed_modules, s.portal_token,\n       c.name as course_name,\n       (SELECT count(*)::int FROM modules WHERE course_int_id = s.course_id AND is_published = TRUE) as total_modules\nFROM students s\nLEFT JOIN courses c ON c.id = s.course_id\nWHERE s.phone = '{{ $node[\"Extrair Evento\"].json.phone }}'\nLIMIT 1",
+                    "options": {}
+                },
+                "id": "cw-get-student",
+                "name": "Buscar Estado do Aluno",
+                "type": "n8n-nodes-base.postgres",
+                "typeVersion": 2.6,
+                "position": [
+                    1740,
+                    200
+                ],
+                "credentials": {
+                    "postgres": {
+                        "id": "lJaeEy4CpHbhgMAp",
+                        "name": "Kreativ PostgreSQL"
+                    }
+                },
+                "continueOnFail": true
+            },
+            {
+                "parameters": {
+                    "jsCode": "const phone = $node['Extrair Evento'].json.phone;\nconst rows = $input.all();\n\nlet name = 'Aluno';\nlet currentModule = 1;\nlet totalModules = 1;\nlet completedModules = [];\nlet courseName = 'Kreativ Educa\u00e7\u00e3o';\nlet portalToken = null;\nlet label = 'em-andamento';\n\nif (rows && rows.length > 0 && rows[0].json.phone) {\n  const s = rows[0].json;\n  name = s.name || 'Aluno';\n  currentModule = s.current_module || 1;\n  totalModules = s.total_modules || 1;\n  completedModules = s.completed_modules || [];\n  courseName = s.course_name || 'Kreativ Educa\u00e7\u00e3o';\n  portalToken = s.portal_token || null;\n}\n\nconst nCompleted = Array.isArray(completedModules) ? completedModules.length : 0;\nconst courseComplete = nCompleted >= totalModules && totalModules > 0;\n\n// Determinar label do Chatwoot p\u00f3s-atendimento\nif (courseComplete) {\n  label = 'concluido';\n} else if (currentModule <= 5) {\n  label = `modulo-${currentModule}`;\n} else {\n  label = 'em-andamento';\n}\n\n// Montar mensagem personalizada por caso\nlet message;\nif (!rows || rows.length === 0 || !rows[0].json.phone) {\n  // Caso 0: Aluno n\u00e3o encontrado no DB\n  message = '\u2705 *Seu atendimento foi encerrado!*\\n\\nPara come\u00e7ar ou retomar o curso, envie *OI*.';\n  label = 'novo-lead';\n} else if (courseComplete) {\n  // Caso 3: Curso completo\n  const portalLink = portalToken\n    ? `\\n\\n\ud83d\udcca Veja seus certificados em:\\nhttps://portal.extensionista.site/aluno/${portalToken}`\n    : '';\n  message = `\u2705 *Atendimento encerrado!* Bom ver voc\u00ea, ${name}! \ud83d\ude0a\\n\\nParab\u00e9ns \u2014 voc\u00ea j\u00e1 concluiu o curso *${courseName}*! \ud83c\udfc6${portalLink}\\n\\nDigite *OI* se precisar de mais alguma coisa.`;\n} else if (nCompleted === 0 && currentModule === 1) {\n  // Caso 1: Aluno n\u00e3o iniciou nenhum m\u00f3dulo\n  message = `\u2705 *Atendimento encerrado!* Ol\u00e1, ${name}! \ud83d\udc4b\\n\\nPara come\u00e7ar seu aprendizado no curso *${courseName}*, responda:\\n\ud83d\udc49 *MODULO* \u2014 acessar o M\u00f3dulo 1\\n\ud83d\udc49 *PROGRESSO* \u2014 ver seu painel`;\n} else {\n  // Caso 2: Aluno em andamento\n  const portalLink = portalToken\n    ? `\\n\\n\ud83d\udcca Acompanhe seu progresso: https://portal.extensionista.site/aluno/${portalToken}`\n    : '';\n  message = `\u2705 *Atendimento encerrado!* Ol\u00e1, ${name}! \ud83d\udc4b\\n\\nPode continuar de onde parou no curso *${courseName}*:\\n\ud83d\udc49 *MODULO* \u2014 continuar no M\u00f3dulo ${currentModule}\\n\ud83d\udc49 *QUIZ* \u2014 refazer a avalia\u00e7\u00e3o do m\u00f3dulo atual\\n\ud83d\udc49 *PROGRESSO* \u2014 ver todo seu andamento${portalLink}`;\n}\n\nreturn [{ json: { phone, message, label } }];"
+                },
+                "id": "cw-build-resume",
+                "name": "Montar Mensagem de Retomada",
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    1960,
+                    200
+                ]
+            },
+            {
+                "parameters": {
+                    "method": "POST",
+                    "url": "http://kreativ_evolution:8080/message/sendText/europs",
+                    "sendHeaders": true,
+                    "headerParameters": {
+                        "parameters": [
+                            {
+                                "name": "apikey",
+                                "value": "EXr5OuEE2sBMbRo94LtWQfofvEF1gHUM"
+                            }
+                        ]
+                    },
+                    "sendBody": true,
+                    "specifyBody": "json",
+                    "jsonBody": "={{ JSON.stringify({ number: $json.phone, text: $json.message }) }}",
+                    "options": {
+                        "timeout": 10000
+                    }
+                },
+                "id": "cw-send-wa",
+                "name": "Enviar WhatsApp Retomada",
+                "type": "n8n-nodes-base.httpRequest",
+                "typeVersion": 4.2,
+                "position": [
+                    2180,
+                    200
+                ],
+                "continueOnFail": true
+            },
+            {
+                "parameters": {
+                    "method": "POST",
+                    "url": "http://kreativ_n8n:5678/webhook/update-chatwoot-label",
+                    "sendBody": true,
+                    "specifyBody": "json",
+                    "jsonBody": "={{ JSON.stringify({ phone: $('Montar Mensagem de Retomada').first().json.phone, label: $('Montar Mensagem de Retomada').first().json.label }) }}",
+                    "options": {
+                        "timeout": 3000
+                    }
+                },
+                "id": "cw-update-label",
+                "name": "Atualizar Label P\u00f3s-Atendimento",
+                "type": "n8n-nodes-base.httpRequest",
+                "typeVersion": 4.2,
+                "position": [
+                    2400,
+                    200
+                ],
+                "continueOnFail": true
+            },
+            {
+                "parameters": {
+                    "operation": "executeQuery",
+                    "query": "BEGIN;\nUPDATE students\nSET attendance_status = 'human', updated_at = NOW()\nWHERE phone = '{{ $json.phone }}';\n\nINSERT INTO handoff_control (phone, status, last_handoff)\nVALUES ('{{ $json.phone }}', 'human', NOW())\nON CONFLICT (phone) DO UPDATE\n  SET status = 'human', last_handoff = NOW();\nCOMMIT;",
+                    "options": {}
+                },
+                "id": "cw-handoff",
+                "name": "Handoff no DB",
+                "type": "n8n-nodes-base.postgres",
+                "typeVersion": 2.6,
+                "position": [
+                    860,
+                    400
+                ],
+                "credentials": {
+                    "postgres": {
+                        "id": "lJaeEy4CpHbhgMAp",
+                        "name": "Kreativ PostgreSQL"
+                    }
+                },
+                "continueOnFail": true
+            },
+            {
+                "id": "rd-set-human",
+                "name": "Redis: Set Human",
+                "type": "n8n-nodes-base.redis",
+                "typeVersion": 1,
+                "position": [
+                    1080,
+                    400
+                ],
+                "parameters": {
+                    "operation": "set",
+                    "key": "={{ \"session:\" + $node[\"Extrair Evento\"].json.phone + \":status\" }}",
+                    "value": "={{ JSON.stringify({ attendance_status: 'human', handoff_at: new Date().toISOString() }) }}",
+                    "expire": 86400
+                },
+                "credentials": {
+                    "redis": {
+                        "id": "GDNQ9fUq1chyneTT",
+                        "name": "Kreativ Redis V4"
+                    }
+                }
+            },
+            {
+                "parameters": {
+                    "method": "GET",
+                    "url": "http://kreativ_chatwoot_app:3000/api/v1/accounts/2/conversations/{{ $json.convId }}/messages",
+                    "sendHeaders": true,
+                    "headerParameters": {
+                        "parameters": [
+                            {
+                                "name": "api_access_token",
+                                "value": "hh5bHLwTRyKoqZzAvaPUUm5v"
+                            }
+                        ]
+                    },
+                    "options": {
+                        "timeout": 10000
+                    }
+                },
+                "id": "get-history",
+                "name": "Buscar Hist\u00f3rico",
+                "type": "n8n-nodes-base.httpRequest",
+                "typeVersion": 4.2,
+                "position": [
+                    860,
+                    540
+                ],
+                "continueOnFail": true
+            },
+            {
+                "parameters": {
+                    "jsCode": "const messages = ($json.payload || []);\n// \u00daltimo incoming (aluno) e \u00faltimo outgoing (tutor)\nconst lastIncoming = messages.slice().reverse().find(m => m.message_type === 0 || m.message_type === 'incoming');\nconst lastOutgoing = messages.slice().reverse().find(m => m.message_type === 1 || m.message_type === 'outgoing');\n\nconst phone = $node['Extrair Evento'].json.phone;\nconst convId = $node['Extrair Evento'].json.convId;\n\nif (!lastIncoming || !lastOutgoing) {\n  console.log('[TREINAMENTO] Par Q&A incompleto \u2014 skipping');\n  return [];\n}\n\nreturn [{ json: {\n  question: lastIncoming.content,\n  answer: lastOutgoing.content,\n  phone,\n  conv_id: convId\n} }];"
+                },
+                "id": "extract-pair",
+                "name": "Extrair Par Q&A",
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    1080,
+                    540
+                ]
+            },
+            {
+                "parameters": {
+                    "operation": "executeQuery",
+                    "query": "INSERT INTO training_memory (question, answer, student_phone, conv_id)\nVALUES ('{{ $json.question.replace(/'/g, \"''\") }}', '{{ $json.answer.replace(/'/g, \"''\") }}', '{{ $json.phone }}', {{ $json.conv_id }})\nON CONFLICT (conv_id) DO NOTHING;",
+                    "options": {}
+                },
+                "id": "save-memory",
+                "name": "Salvar Mem\u00f3ria Treino",
+                "type": "n8n-nodes-base.postgres",
+                "typeVersion": 2.6,
+                "position": [
+                    1300,
+                    540
+                ],
+                "credentials": {
+                    "postgres": {
+                        "id": "lJaeEy4CpHbhgMAp",
+                        "name": "Kreativ PostgreSQL"
+                    }
+                },
+                "continueOnFail": true
+            }
+        ],
+        "connections": {
+            "Webhook Chatwoot": {
+                "main": [
+                    [
+                        {
+                            "node": "Extrair Evento",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Extrair Evento": {
+                "main": [
+                    [
+                        {
+                            "node": "Tipo de Evento",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Tipo de Evento": {
+                "main": [
+                    [
+                        {
+                            "node": "Verificar Estado Atual",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ],
+                    [
+                        {
+                            "node": "Handoff no DB",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ],
+                    [
+                        {
+                            "node": "Buscar Hist\u00f3rico",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Verificar Estado Atual": {
+                "main": [
+                    [
+                        {
+                            "node": "Idempot\u00eancia: J\u00e1 \u00e9 Bot?",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Idempot\u00eancia: J\u00e1 \u00e9 Bot?": {
+                "main": [
+                    [
+                        {
+                            "node": "Retomar Bot no DB",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Retomar Bot no DB": {
+                "main": [
+                    [
+                        {
+                            "node": "Redis: Set Bot",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Redis: Set Bot": {
+                "main": [
+                    [
+                        {
+                            "node": "Buscar Estado do Aluno",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Buscar Estado do Aluno": {
+                "main": [
+                    [
+                        {
+                            "node": "Montar Mensagem de Retomada",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Montar Mensagem de Retomada": {
+                "main": [
+                    [
+                        {
+                            "node": "Enviar WhatsApp Retomada",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Enviar WhatsApp Retomada": {
+                "main": [
+                    [
+                        {
+                            "node": "Atualizar Label P\u00f3s-Atendimento",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Handoff no DB": {
+                "main": [
+                    [
+                        {
+                            "node": "Redis: Set Human",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Buscar Hist\u00f3rico": {
+                "main": [
+                    [
+                        {
+                            "node": "Extrair Par Q&A",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Extrair Par Q&A": {
+                "main": [
+                    [
+                        {
+                            "node": "Salvar Mem\u00f3ria Treino",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            }
+        },
+        "authors": "Rafael da Silva",
+        "name": null,
+        "description": null,
+        "autosaved": false,
+        "workflowPublishHistory": [
+            {
+                "createdAt": "2026-02-22T03:34:42.185Z",
+                "id": 1536,
+                "workflowId": "y92mEtPP4nK1p037",
+                "versionId": "68eb19bc-a5e9-4a0b-8d52-241ce44209d3",
+                "event": "deactivated",
+                "userId": "d7e6ecc8-7259-4124-87c7-29a5f2d233ba"
+            },
+            {
+                "createdAt": "2026-02-22T03:34:42.201Z",
+                "id": 1537,
+                "workflowId": "y92mEtPP4nK1p037",
+                "versionId": "68eb19bc-a5e9-4a0b-8d52-241ce44209d3",
+                "event": "activated",
+                "userId": "d7e6ecc8-7259-4124-87c7-29a5f2d233ba"
+            },
+            {
+                "createdAt": "2026-02-21T22:25:00.922Z",
+                "id": 1515,
+                "workflowId": "y92mEtPP4nK1p037",
+                "versionId": "68eb19bc-a5e9-4a0b-8d52-241ce44209d3",
+                "event": "deactivated",
+                "userId": "d7e6ecc8-7259-4124-87c7-29a5f2d233ba"
+            },
+            {
+                "createdAt": "2026-02-21T22:25:00.952Z",
+                "id": 1516,
+                "workflowId": "y92mEtPP4nK1p037",
+                "versionId": "68eb19bc-a5e9-4a0b-8d52-241ce44209d3",
+                "event": "activated",
+                "userId": "d7e6ecc8-7259-4124-87c7-29a5f2d233ba"
+            },
+            {
+                "createdAt": "2026-02-21T22:29:25.162Z",
+                "id": 1517,
+                "workflowId": "y92mEtPP4nK1p037",
+                "versionId": "68eb19bc-a5e9-4a0b-8d52-241ce44209d3",
+                "event": "deactivated",
+                "userId": "d7e6ecc8-7259-4124-87c7-29a5f2d233ba"
+            },
+            {
+                "createdAt": "2026-02-21T22:29:25.183Z",
+                "id": 1518,
+                "workflowId": "y92mEtPP4nK1p037",
+                "versionId": "68eb19bc-a5e9-4a0b-8d52-241ce44209d3",
+                "event": "activated",
+                "userId": "d7e6ecc8-7259-4124-87c7-29a5f2d233ba"
+            }
+        ]
+    }
+}
