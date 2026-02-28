@@ -4,8 +4,8 @@
 ---
 
 ## 🗓️ Última Atualização
-**Data:** 2026-02-22 (v0.4.0)
-**Versão:** v0.4 — N8N Async + ToolJet/Metabase Planejados
+**Data:** 2026-02-28 (v0.4.2)
+**Versão:** v0.4.2 — Smoke test E2E completo + Chatwoot handoff validado
 **Repo:** https://github.com/RAFAELUFT22/kreativ_bot_v2.git
 **VPS:** extensionista.site (Hostinger, 7.8GB RAM, 1 vCPU, 48GB disco)
 
@@ -33,7 +33,7 @@
 ```
 WhatsApp do Aluno
     ↓ mensagem
-Evolution API v2.2.3 (instância: europs)
+Evolution API v2.2.3 (instância: europs — integração: WHATSAPP-BUSINESS / Cloud API)
     ↓ triggerType: "all" → Typebot
 Typebot "Kreativ Educacao" (kreativ-educacao)
     ↓ Webhook blocks server-side (type: "Webhook" capital W)
@@ -75,7 +75,7 @@ Aluno recebe resposta imediata do bot ("Analisando...") e depois recebe a respos
 - **Webhook path:** `kreativ-unified-api`
 - **Actions suportados:** `check_student`, `get_module`, `submit_quiz`, `get_progress`, `request_human`, `ai_tutor`, `emit_certificate`, `admin_upsert_student`, `admin_reset_student`, `admin_upsert_course`, `admin_upsert_module`
 - **Arquivo:** `n8n-workflows/60-kreativ-api-ultimate.json`
-- **Status:** Ativo com 3 paths async (ai_tutor, submit_quiz, get_module). Pending: Task 6 build_typebot.py + Task 7 smoke test final.
+- **Status:** Ativo com 3 paths async (ai_tutor, submit_quiz, get_module). Smoke test E2E concluído em 2026-02-28.
 
 ### Banco de Dados (kreativ_edu)
 | Tabela | Registros |
@@ -89,52 +89,15 @@ Aluno recebe resposta imediata do bot ("Analisando...") e depois recebe a respos
 
 ## ⚠️ Problemas Conhecidos / Próximas Correções
 
-### PROBLEMA 1 — Menus como texto (PRIORIDADE ALTA)
-**Sintoma:** O Typebot envia os menus de escolha (Choice Input) como texto puro com emojis em vez de botões interativos do WhatsApp.
-**Causa raiz:** Evolution API v2.2.3 (Baileys/unofficial) não suporta nativamente a renderização de botões interativos do WhatsApp Business API. O WhatsApp permite no máximo **3 botões** por mensagem interativa. O Typebot envia como texto simples.
-**Soluções possíveis (em ordem de complexidade):**
+### ✅ RESOLVIDO — Botões interativos WhatsApp (Fase 3A)
+**Solução aplicada:** `scripts/build_typebot.py` gera blocos de texto com sintaxe `[buttons]` no lugar de Choice Input.
+Evolution API detecta a tag `[buttons]` e envia como mensagem interativa da **Meta Cloud API** (integração: WHATSAPP-BUSINESS).
+Quando o aluno toca um botão, `interactive.button_reply.title` é capturado pelo Typebot como variável `conversation`.
+Condições `Contains` no Typebot roteiam pelo título: "Meu Módulo", "Progresso", "Suporte", etc.
 
-#### Opção A — Usar sintaxe especial de botões do Evolution API (RÁPIDO)
-A Evolution API v2 suporta botões via sintaxe `[buttons]` no texto:
-```
-[buttons]
-[title]Título aqui[/title]
-[description]Descrição[/description]
-[reply]displayText: Opção 1, id: opt1[/reply]
-[reply]displayText: Opção 2, id: opt2[/reply]
-[reply]displayText: Opção 3, id: opt3[/reply]
-[/buttons]
-```
-Configurar um bloco de texto Typebot com essa sintaxe em vez de Choice Input.
-
-#### Opção B — Migrar para Cloud API Meta (CORRETO, MAS TRABALHOSO)
-- Criar conta Meta Business + número oficial WhatsApp Business
-- Migrar instância Evolution de Baileys → Cloud API (`"integration": "WHATSAPP-BUSINESS"`)
-- Com Cloud API: botões interativos, listas (até 10 itens), templates aprovados
-- **Requisitos:** META_JWT_TOKEN permanente (System User Token), META_NUMBER_ID, META_BUSINESS_ID
-- Arquivo de referência: `scripts/create_instance_meta.sh` (já existente no repo)
-- Endpoint webhook Meta: `POST /webhook/meta` com `WA_BUSINESS_TOKEN_WEBHOOK`
-
-#### Opção C — Usar WhatsApp List Messages (MÉDIO)
-Para menus maiores (como o menu principal com 4 opções), usar sintaxe `[list]` da Evolution API:
-```
-[list]
-[title]Menu Principal[/title]
-[description]O que deseja fazer?[/description]
-[buttonText]Selecionar[/buttonText]
-[menu]
-[section]
-title: Opções
-[row]title: 📚 Módulo, rowId: mod[/row]
-[row]title: 📊 Progresso, rowId: prog[/row]
-[/section]
-[/menu]
-[/list]
-```
-
-### PROBLEMA 2 — Escolhas no WhatsApp (Choice Input)
-**Sintoma:** Opções de múltipla escolha aparecem como texto com emojis em vez de botões interativos.
-**Status:** Pendente correção via sintaxe `[buttons]` ou migração para Cloud API.
+### ✅ RESOLVIDO — Integração Cloud API Meta
+A instância `europs` da Evolution API v2.2.3 está configurada com `integration: "WHATSAPP-BUSINESS"` (Cloud API Meta), **não Baileys**.
+Referência de setup: `scripts/create_instance_meta.sh` e `docs/GUIA_WHATSAPP_CLOUD_API.md`.
 
 ---
 
@@ -147,6 +110,7 @@ title: Opções
 | `docker-compose.yml` | Stack completa (14 serviços) |
 | `init-scripts/01-init-dbs.sql` | Schema original PostgreSQL |
 | `init-scripts/02-migration-courses.sql` | Migration courses aplicada |
+| `init-scripts/05-migration-handoff-chatwoot.sql` | handoff_control + training_memory |
 | `docs/GUIA_WHATSAPP_CLOUD_API.md` | **NOVO** — Guia oficial Meta Cloud API (2025/26) |
 
 ### Scripts Ativos (usar estes, não os deprecados)
@@ -168,14 +132,18 @@ title: Opções
 | `n8n-workflows/08-inatividade.json` | FDkc4gh7kp6hKZ3E | Lembrete inatividade |
 | `n8n-workflows/09-relatorio-semanal.json` | HCnfOkbtviheBGBk | Relatório semanal |
 
-### N8N Workflows Ativos (CORRETO — v0.4.0)
-| Arquivo | ID N8N | Propósito |
-|---------|--------|-----------|
-| `n8n-workflows/60-kreativ-api-ultimate.json` | `SoB5evP9aOmj6hLA` | **Unified API ULTIMATE** (principal, async) |
-| `n8n-workflows/10-whatsapp-router-active.json` | `a0RywHWeY5kfgzGT` | WhatsApp Router |
-| `n8n-workflows/20-ai-router-v3-redis-rag.json` | `5caL67H387euTxan` | AI Sub-workflow V3 (RAG) |
-| `n8n-workflows/10-chatwoot-retomar-bot.json` | `y92mEtPP4nK1p037` | Chatwoot → Retomar Bot |
-| `n8n-workflows/20-ai-tutor-v2-patched.json` | `a0RywHWeY5kfgzGT` | AI Adaptive Router |
+### N8N Workflows Ativos (v0.4.2 — 2026-02-28)
+| Arquivo | ID N8N | Status | Propósito |
+|---------|--------|--------|-----------|
+| `n8n-workflows/60-kreativ-api-ultimate.json` | `SoB5evP9aOmj6hLA` | **ACTIVE** | Unified API ULTIMATE (10 actions, async, ai_tutor inline) |
+| `n8n-workflows/10-chatwoot-retomar-bot.json` | `y92mEtPP4nK1p037` | **ACTIVE** | Chatwoot → Retomar Bot & Treinamento |
+| `n8n-workflows/99-global-error-handler.json` | `mFwiM2dZyKeEgKk6` | **ACTIVE** | Global Error Handler |
+
+Workflows LEGADO (inativos, não necessários):
+| Arquivo | ID N8N | Nota |
+|---------|--------|------|
+| `10-whatsapp-router-active.json` | `a0RywHWeY5kfgzGT` | Substituído pelo ULTIMATE |
+| `20-ai-router-v3-redis-rag.json` | `5caL67H387euTxan` | ai_tutor agora inline no ULTIMATE |
 
 ### Arquivos DEPRECATED (não usar, manter apenas para referência)
 - Qualquer `n8n-workflows/` não listado acima
@@ -201,9 +169,26 @@ title: Opções
 
 ## 🛣️ Roadmap de Próximas Etapas
 
-### Pendentes IMEDIATOS (sessão atual)
-- [ ] **Task 6:** Atualizar `scripts/build_typebot.py` — remover `responseVariableMapping` do `ai_tutor` e simplificar `submit_quiz` + `get_module` (plano: `docs/plans/2026-02-22-n8n-async-impl.md`)
-- [ ] **Task 7:** Smoke test final + exportar `60-kreativ-api-ultimate.json` + push
+### ✅ CONCLUÍDO — Smoke Test E2E (2026-02-28)
+Migration `init-scripts/05-migration-handoff-chatwoot.sql` criada e aplicada:
+- `handoff_control` — rastreia estado bot/human por telefone (referenciada em 3 workflows)
+- `training_memory` — pares Q&A capturados de tutores humanos no Chatwoot
+
+Smoke test via webhook N8N (todas as actions testadas com sucesso):
+| Action | Status | Latência | Resultado |
+|--------|--------|----------|-----------|
+| `check_student` | 200 | 0.6s | Aluno encontrado, dados corretos |
+| `get_module` | 200 | 5.3s | Módulo retornado + quiz async gerado |
+| `get_progress` | 200 | 0.5s | Progresso retornado corretamente |
+| `ai_tutor` | 200 | 4.4-5.5s (async) | DeepSeek respondeu + WhatsApp enviado via Evolution |
+| `request_human` | 200 | ~1s | handoff_control=human, sessão criada, Chatwoot notificado |
+
+Bugs encontrados (não-blockers):
+- `request_human`: campo `reason` salvo como `undefined` no support_sessions (bug de passagem de dados no N8N)
+- Task runner N8N intermitentemente instável (se recupera sozinho)
+
+### Pendentes IMEDIATOS
+- [ ] **Task 6:** Atualizar `scripts/build_typebot.py` — remover `responseVariableMapping` do `ai_tutor` e simplificar `submit_quiz` + `get_module`
 
 ### Fase 4A — ToolJet + Metabase (Próxima sessão)
 Plano detalhado: `docs/plans/2026-02-22-tooljet-metabase-impl.md`
@@ -287,7 +272,7 @@ docker exec kreativ_postgres psql -U kreativ_user -d typebot_db -c
 2. **`TYPEBOT_API_VERSION=latest`** → chama `POST /api/v1/typebots/{slug}/startChat`
 3. **Para continuar sessão:** `POST /api/v1/sessions/{sessionId}/continueChat`
 4. **Formato remoteJid:** `556399374165@s.whatsapp.net` — N8N normaliza com `replace(/\D/g,'')`
-5. **Botões interativos:** não suportados nativamente — usar sintaxe `[buttons]` ou `[list]` no texto
+5. **Botões interativos:** Suportados via **WhatsApp Cloud API** nativamente. Sintaxe `[buttons]` ou `[list]` no texto é processada pela Evolution e enviada como mensagens interativas oficiais da Meta.
 
 ### N8N — Regras de Ouro
 1. **Ghost workflows** com `active=true` no DB bloqueiam registro de webhooks — limpar com SQL
