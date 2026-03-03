@@ -1,0 +1,242 @@
+{
+  "name": "Kreativ: AI Course Generator (Frappe LMS)",
+  "nodes": [
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "course_title",
+              "value": "Novo Curso de Exemplo"
+            },
+            {
+              "name": "course_objective",
+              "value": "Ensinar os fundamentos de X para empreendedores do setor Y"
+            }
+          ]
+        }
+      },
+      "id": "trigger-id",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "modelId": "google/gemini-2.0-flash-001",
+        "messages": {
+          "values": [
+            {
+              "content": "=Gere a estrutura completa de um curso chamado "{{ $node["Manual Trigger"].json["course_title"] }}" com o objetivo: "{{ $node["Manual Trigger"].json["course_objective"] }}".
+
+Retorne um JSON puro no seguinte formato:
+{
+  "short_introduction": "...",
+  "chapters": [
+    {
+      "title": "Capítulo 1",
+      "lessons": [
+        { "title": "Aula 1", "content": "Conteúdo em Markdown aqui..." }
+      ]
+    }
+  ]
+}",
+              "role": "user"
+            }
+          ]
+        },
+        "options": {
+          "responseFormat": "json_object"
+        }
+      },
+      "id": "ai-id",
+      "name": "AI Content Designer",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [460, 300],
+      "credentials": {
+        "openAiApi": {
+          "id": "temp-id",
+          "name": "OpenRouter (Gemini)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://lms.extensionista.site/api/resource/LMS Course",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "token 24c8f8aba4e1783:4cdd3ec9c24eb9f"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "title",
+              "value": "={{ $node["Manual Trigger"].json["course_title"] }}"
+            },
+            {
+              "name": "short_introduction",
+              "value": "={{ $node["AI Content Designer"].json["short_introduction"] }}"
+            },
+            {
+              "name": "published",
+              "value": "1"
+            },
+            {
+              "name": "instructors",
+              "value": "=[{"instructor": "Administrator"}]"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "create-course-id",
+      "name": "Create Course",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "chapters",
+        "options": {}
+      },
+      "id": "split-chapters-id",
+      "name": "Split Chapters",
+      "type": "n8n-nodes-base.itemLists",
+      "typeVersion": 3,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://lms.extensionista.site/api/resource/Course Chapter",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "token 24c8f8aba4e1783:4cdd3ec9c24eb9f"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "title",
+              "value": "={{ $json["title"] }}"
+            },
+            {
+              "name": "course",
+              "value": "={{ $node["Create Course"].json["data"]["name"] }}"
+            },
+            {
+              "name": "idx",
+              "value": "={{ $itemIndex + 1 }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "create-chapter-id",
+      "name": "Create Chapter",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "lessons",
+        "options": {}
+      },
+      "id": "split-lessons-id",
+      "name": "Split Lessons",
+      "type": "n8n-nodes-base.itemLists",
+      "typeVersion": 3,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://lms.extensionista.site/api/resource/Course Lesson",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "token 24c8f8aba4e1783:4cdd3ec9c24eb9f"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "title",
+              "value": "={{ $json["title"] }}"
+            },
+            {
+              "name": "chapter",
+              "value": "={{ $node["Create Chapter"].json["data"]["name"] }}"
+            },
+            {
+              "name": "course",
+              "value": "={{ $node["Create Course"].json["data"]["name"] }}"
+            },
+            {
+              "name": "body",
+              "value": "={{ $json["content"] }}"
+            },
+            {
+              "name": "content",
+              "value": "{"blocks": []}"
+            },
+            {
+              "name": "published",
+              "value": "1"
+            },
+            {
+              "name": "idx",
+              "value": "={{ $itemIndex + 1 }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "create-lesson-id",
+      "name": "Create Lesson",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1560, 300]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [[{ "node": "AI Content Designer", "type": "main", "index": 0 }]]
+    },
+    "AI Content Designer": {
+      "main": [[{ "node": "Create Course", "type": "main", "index": 0 }]]
+    },
+    "Create Course": {
+      "main": [[{ "node": "Split Chapters", "type": "main", "index": 0 }]]
+    },
+    "Split Chapters": {
+      "main": [[{ "node": "Create Chapter", "type": "main", "index": 0 }]]
+    },
+    "Create Chapter": {
+      "main": [[{ "node": "Split Lessons", "type": "main", "index": 0 }]]
+    },
+    "Split Lessons": {
+      "main": [[{ "node": "Create Lesson", "type": "main", "index": 0 }]]
+    }
+  }
+}

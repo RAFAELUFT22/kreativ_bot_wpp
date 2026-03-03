@@ -1,0 +1,546 @@
+{
+  "groups": [
+    {
+      "id": "g_start",
+      "title": "Início",
+      "graphCoordinates": {
+        "x": 0,
+        "y": 0
+      },
+      "blocks": [
+        {
+          "id": "bloco_start",
+          "type": "start",
+          "label": "Início",
+          "outgoingEdgeId": "edge_start_ident"
+        }
+      ]
+    },
+    {
+      "id": "g_ident",
+      "title": "Identificação",
+      "graphCoordinates": {
+        "x": 200,
+        "y": 0
+      },
+      "blocks": [
+        {
+          "id": "bloco_ident_intro",
+          "type": "text",
+          "content": {
+            "richText": [
+              {
+                "type": "p",
+                "children": [
+                  {
+                    "text": "Vamos começar com seus dados de identificação."
+                  }
+                ]
+              }
+            ]
+          },
+          "outgoingEdgeId": "edge_ident_nome"
+        },
+        {
+          "id": "bloco_nome",
+          "type": "text input",
+          "label": "Nome",
+          "options": {
+            "variableId": "var_nome"
+          },
+          "outgoingEdgeId": "edge_nome_cpf"
+        },
+        {
+          "id": "bloco_cpf",
+          "type": "text input",
+          "label": "CPF",
+          "options": {
+            "variableId": "var_cpf"
+          },
+          "outgoingEdgeId": "edge_cpf_municipio"
+        },
+        {
+          "id": "bloco_municipio",
+          "type": "text input",
+          "label": "Município",
+          "options": {
+            "variableId": "var_municipio"
+          },
+          "outgoingEdgeId": "edge_ident_perfil"
+        }
+      ]
+    },
+    {
+      "id": "g_perfil",
+      "title": "Perfil",
+      "graphCoordinates": {
+        "x": 400,
+        "y": 0
+      },
+      "blocks": [
+        {
+          "id": "bloco_perfil_intro",
+          "type": "text",
+          "content": {
+            "richText": [
+              {
+                "type": "p",
+                "children": [
+                  {
+                    "text": "Agora, algumas informações sobre seu perfil."
+                  }
+                ]
+              }
+            ]
+          },
+          "outgoingEdgeId": "edge_perfil_sexo"
+        },
+        {
+          "id": "bloco_sexo",
+          "type": "choice input",
+          "label": "Sexo",
+          "items": [
+            {
+              "id": "item_masculino",
+              "content": "Masculino"
+            },
+            {
+              "id": "item_feminino",
+              "content": "Feminino"
+            },
+            {
+              "id": "item_outro",
+              "content": "Outro"
+            }
+          ],
+          "outgoingEdgeId": "edge_sexo_idade"
+        },
+        {
+          "id": "bloco_idade",
+          "type": "text input",
+          "label": "Idade",
+          "options": {
+            "variableId": "var_idade"
+          },
+          "outgoingEdgeId": "edge_idade_escolaridade"
+        },
+        {
+          "id": "bloco_escolaridade",
+          "type": "choice input",
+          "label": "Escolaridade",
+          "items": [
+            {
+              "id": "item_fundamental",
+              "content": "Fundamental"
+            },
+            {
+              "id": "item_medio",
+              "content": "Médio"
+            },
+            {
+              "id": "item_superior",
+              "content": "Superior"
+            },
+            {
+              "id": "item_pos",
+              "content": "Pós-graduação"
+            }
+          ],
+          "outgoingEdgeId": "edge_perfil_social"
+        }
+      ]
+    },
+    {
+      "id": "g_social",
+      "title": "Social",
+      "graphCoordinates": {
+        "x": 600,
+        "y": 0
+      },
+      "blocks": [
+        {
+          "id": "bloco_social_intro",
+          "type": "text",
+          "content": {
+            "richText": [
+              {
+                "type": "p",
+                "children": [
+                  {
+                    "text": "Informações sobre sua situação social."
+                  }
+                ]
+              }
+            ]
+          },
+          "outgoingEdgeId": "edge_social_cadunico"
+        },
+        {
+          "id": "bloco_cadunico",
+          "type": "choice input",
+          "label": "Cadastro Único (CadÚnico)",
+          "items": [
+            {
+              "id": "item_cadunico_sim",
+              "content": "Sim"
+            },
+            {
+              "id": "item_cadunico_nao",
+              "content": "Não"
+            }
+          ],
+          "outgoingEdgeId": "edge_cadunico_beneficios"
+        },
+        {
+          "id": "bloco_beneficios",
+          "type": "choice input",
+          "label": "Recebe Benefícios Sociais?",
+          "items": [
+            {
+              "id": "item_beneficios_sim",
+              "content": "Sim"
+            },
+            {
+              "id": "item_beneficios_nao",
+              "content": "Não"
+            }
+          ],
+          "outgoingEdgeId": "edge_social_renda"
+        }
+      ]
+    },
+    {
+      "id": "g_renda",
+      "title": "Renda",
+      "graphCoordinates": {
+        "x": 800,
+        "y": 0
+      },
+      "blocks": [
+        {
+          "id": "bloco_renda_intro",
+          "type": "text",
+          "content": {
+            "richText": [
+              {
+                "type": "p",
+                "children": [
+                  {
+                    "text": "Dados sobre sua renda."
+                  }
+                ]
+              }
+            ]
+          },
+          "outgoingEdgeId": "edge_renda_pessoal"
+        },
+        {
+          "id": "bloco_renda_pessoal",
+          "type": "text input",
+          "label": "Renda Pessoal (R$)",
+          "options": {
+            "variableId": "var_renda_pessoal"
+          },
+          "outgoingEdgeId": "edge_pessoal_familiar"
+        },
+        {
+          "id": "bloco_renda_familiar",
+          "type": "text input",
+          "label": "Renda Familiar (R$)",
+          "options": {
+            "variableId": "var_renda_familiar"
+          },
+          "outgoingEdgeId": "edge_renda_atividade"
+        }
+      ]
+    },
+    {
+      "id": "g_atividade",
+      "title": "Atividade",
+      "graphCoordinates": {
+        "x": 1000,
+        "y": 0
+      },
+      "blocks": [
+        {
+          "id": "bloco_atividade_intro",
+          "type": "text",
+          "content": {
+            "richText": [
+              {
+                "type": "p",
+                "children": [
+                  {
+                    "text": "Sobre sua atividade principal."
+                  }
+                ]
+              }
+            ]
+          },
+          "outgoingEdgeId": "edge_atividade_tipo"
+        },
+        {
+          "id": "bloco_tipo_atividade",
+          "type": "choice input",
+          "label": "Tipo de Atividade",
+          "items": [
+            {
+              "id": "item_emprego",
+              "content": "Emprego Formal"
+            },
+            {
+              "id": "item_informal",
+              "content": "Trabalho Informal"
+            },
+            {
+              "id": "item_autonomo",
+              "content": "Autônomo"
+            },
+            {
+              "id": "item_desempregado",
+              "content": "Desempregado"
+            }
+          ],
+          "outgoingEdgeId": "edge_atividade_final"
+        }
+      ]
+    },
+    {
+      "id": "g_final",
+      "title": "Finalização",
+      "graphCoordinates": {
+        "x": 1200,
+        "y": 0
+      },
+      "blocks": [
+        {
+          "id": "bloco_final_webhook",
+          "type": "Webhook",
+          "label": "Enviar Formulário",
+          "options": {
+            "url": "submit_tds_form",
+            "method": "POST"
+          },
+          "outgoingEdgeId": "edge_final_end"
+        },
+        {
+          "id": "bloco_final_agradecimento",
+          "type": "text",
+          "content": {
+            "richText": [
+              {
+                "type": "p",
+                "children": [
+                  {
+                    "text": "Obrigado por preencher o formulário TDS!"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "variables": [
+    {
+      "id": "var_nome",
+      "name": "Nome"
+    },
+    {
+      "id": "var_cpf",
+      "name": "CPF"
+    },
+    {
+      "id": "var_municipio",
+      "name": "Município"
+    },
+    {
+      "id": "var_idade",
+      "name": "Idade"
+    },
+    {
+      "id": "var_renda_pessoal",
+      "name": "Renda Pessoal"
+    },
+    {
+      "id": "var_renda_familiar",
+      "name": "Renda Familiar"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge_start_ident",
+      "from": {
+        "blockId": "bloco_start"
+      },
+      "to": {
+        "groupId": "g_ident"
+      }
+    },
+    {
+      "id": "edge_ident_nome",
+      "from": {
+        "blockId": "bloco_ident_intro"
+      },
+      "to": {
+        "blockId": "bloco_nome"
+      }
+    },
+    {
+      "id": "edge_nome_cpf",
+      "from": {
+        "blockId": "bloco_nome"
+      },
+      "to": {
+        "blockId": "bloco_cpf"
+      }
+    },
+    {
+      "id": "edge_cpf_municipio",
+      "from": {
+        "blockId": "bloco_cpf"
+      },
+      "to": {
+        "blockId": "bloco_municipio"
+      }
+    },
+    {
+      "id": "edge_ident_perfil",
+      "from": {
+        "blockId": "bloco_municipio"
+      },
+      "to": {
+        "groupId": "g_perfil"
+      }
+    },
+    {
+      "id": "edge_perfil_sexo",
+      "from": {
+        "blockId": "bloco_perfil_intro"
+      },
+      "to": {
+        "blockId": "bloco_sexo"
+      }
+    },
+    {
+      "id": "edge_sexo_idade",
+      "from": {
+        "blockId": "bloco_sexo"
+      },
+      "to": {
+        "blockId": "bloco_idade"
+      }
+    },
+    {
+      "id": "edge_idade_escolaridade",
+      "from": {
+        "blockId": "bloco_idade"
+      },
+      "to": {
+        "blockId": "bloco_escolaridade"
+      }
+    },
+    {
+      "id": "edge_perfil_social",
+      "from": {
+        "blockId": "bloco_escolaridade"
+      },
+      "to": {
+        "groupId": "g_social"
+      }
+    },
+    {
+      "id": "edge_social_cadunico",
+      "from": {
+        "blockId": "bloco_social_intro"
+      },
+      "to": {
+        "blockId": "bloco_cadunico"
+      }
+    },
+    {
+      "id": "edge_cadunico_beneficios",
+      "from": {
+        "blockId": "bloco_cadunico"
+      },
+      "to": {
+        "blockId": "bloco_beneficios"
+      }
+    },
+    {
+      "id": "edge_social_renda",
+      "from": {
+        "blockId": "bloco_beneficios"
+      },
+      "to": {
+        "groupId": "g_renda"
+      }
+    },
+    {
+      "id": "edge_renda_pessoal",
+      "from": {
+        "blockId": "bloco_renda_intro"
+      },
+      "to": {
+        "blockId": "bloco_renda_pessoal"
+      }
+    },
+    {
+      "id": "edge_pessoal_familiar",
+      "from": {
+        "blockId": "bloco_renda_pessoal"
+      },
+      "to": {
+        "blockId": "bloco_renda_familiar"
+      }
+    },
+    {
+      "id": "edge_renda_atividade",
+      "from": {
+        "blockId": "bloco_renda_familiar"
+      },
+      "to": {
+        "groupId": "g_atividade"
+      }
+    },
+    {
+      "id": "edge_atividade_tipo",
+      "from": {
+        "blockId": "bloco_atividade_intro"
+      },
+      "to": {
+        "blockId": "bloco_tipo_atividade"
+      }
+    },
+    {
+      "id": "edge_atividade_final",
+      "from": {
+        "blockId": "bloco_tipo_atividade"
+      },
+      "to": {
+        "groupId": "g_final"
+      }
+    },
+    {
+      "id": "edge_final_end",
+      "from": {
+        "blockId": "bloco_final_webhook"
+      },
+      "to": {
+        "blockId": "bloco_final_agradecimento"
+      }
+    }
+  ],
+  "events": [
+    {
+      "id": "start",
+      "type": "start",
+      "graphCoordinates": {
+        "x": -400,
+        "y": 0
+      },
+      "outgoingEdgeId": "edge_start_ident"
+    }
+  ]
+}

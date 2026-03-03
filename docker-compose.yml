@@ -19,6 +19,8 @@
 networks:
   kreativ_net:
     driver: bridge
+  norte_net:
+    driver: bridge
   coolify:
     external: true # rede do Traefik gerenciado pelo Coolify
 
@@ -36,6 +38,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init-scripts:/docker-entrypoint-initdb.d
@@ -202,6 +206,7 @@ services:
       N8N_PROXY_HOPS: 1
       N8N_COMMUNITY_PACKAGES_ALLOW_TOOL_USAGE: "true"
       N8N_AI_ENABLED: "true"
+      N8N_COMMUNITY_PACKAGES_ENABLED: "true"
       ACTIVE_LLM_PROVIDER: ${ACTIVE_LLM_PROVIDER:-openrouter}
       OPEN_ROUTER_API: ${OPEN_ROUTER_API}
       NODE_FUNCTION_ALLOW_BUILTIN: "*"
@@ -609,11 +614,96 @@ services:
       - OPEN_ROUTER_API=${OPEN_ROUTER_API}
     mem_limit: 200m
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 15s
+
+  # ===========================================================================
+  # NORTE PISCINAS — API Backend
+  # https://api.nortepiscinas.net
+  # ===========================================================================
+  norte-api:
+    build:
+      context: ./apps/norte-api
+      dockerfile: Dockerfile
+    container_name: norte_api
+    restart: always
+    environment:
+      PORT: 3000
+      DB_HOST: kreativ_postgres
+      DB_PORT: 5432
+      DB_NAME: norte_piscinas_db
+      DB_USER: norte_db_user
+      DB_PASSWORD: norte_pass_9231
+      CORS_ORIGIN: "https://nortepiscinas.net"
+      BLING_CLIENT_ID: ${BLING_CLIENT_ID:-}
+      BLING_CLIENT_SECRET: ${BLING_CLIENT_SECRET:-}
+      BLING_REFRESH_TOKEN: ${BLING_REFRESH_TOKEN:-}
+      EVOLUTION_API_URL: http://kreativ_evolution:8080
+      EVOLUTION_API_KEY: ${EVOLUTION_API_KEY}
+      MINIO_ENDPOINT: kreativ_minio
+      MINIO_PORT: 9000
+      MINIO_ACCESS_KEY: norte-s3-user
+      MINIO_SECRET_KEY: norte-s3-pass-9231
+      MINIO_BUCKET: norte-piscinas
+      MINIO_PUBLIC_URL: https://s3.extensionista.site/norte-piscinas
+      ASAAS_API_KEY: ${ASAAS_API_KEY}
+      ASAAS_MODE: ${ASAAS_MODE}
+      NODE_ENV: production
+      NODE_OPTIONS: "--max-old-space-size=256"
+    volumes:
+      - /NORTE_PISCINAS:/NORTE_PISCINAS
+    networks:
+      - norte_net
+      - kreativ_net
+      - coolify
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.norte-api.rule=Host(`api.nortepiscinas.net`)"
+      - "traefik.http.routers.norte-api.entrypoints=https"
+      - "traefik.http.routers.norte-api.tls=true"
+      - "traefik.http.routers.norte-api.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.norte-api.middlewares=norte-security-headers"
+      - "traefik.http.middlewares.norte-security-headers.headers.customrequestheaders.X-Project-Scope=norte-piscinas"
+      - "traefik.http.middlewares.norte-security-headers.headers.browserXssFilter=true"
+      - "traefik.http.services.norte-api.loadbalancer.server.port=3000"
+      - "traefik.http.routers.norte-api-http.rule=Host(`api.nortepiscinas.net`)"
+      - "traefik.http.routers.norte-api-http.entrypoints=http"
+      - "traefik.http.routers.norte-api-http.middlewares=kreativ-https-redirect"
+      - "traefik.docker.network=coolify"
+    mem_limit: 256m
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ===========================================================================
+  # NORTE PISCINAS — PWA Front-End
+  # https://nortepiscinas.net
+  # ===========================================================================
+  norte-web:
+    build:
+      context: ./apps/norte-web
+      dockerfile: Dockerfile
+    container_name: norte_web
+    restart: always
+    networks:
+      - norte_net
+      - coolify
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.norte-web.rule=Host(`nortepiscinas.net`) || Host(`www.nortepiscinas.net`)"
+      - "traefik.http.routers.norte-web.entrypoints=https"
+      - "traefik.http.routers.norte-web.tls=true"
+      - "traefik.http.routers.norte-web.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.norte-web.middlewares=norte-security-headers"
+      - "traefik.http.services.norte-web.loadbalancer.server.port=80"
+      - "traefik.http.routers.norte-web-http.rule=Host(`nortepiscinas.net`) || Host(`www.nortepiscinas.net`)"
+      - "traefik.http.routers.norte-web-http.entrypoints=http"
+      - "traefik.http.routers.norte-web-http.middlewares=kreativ-https-redirect"
+      - "traefik.docker.network=coolify"
+    mem_limit: 64m
 
 volumes:
   postgres_data:

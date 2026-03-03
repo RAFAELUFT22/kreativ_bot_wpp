@@ -41,7 +41,7 @@ WhatsApp → Evolution API → Typebot v6 → N8N (Unified API) → PostgreSQL
 |---------|--------|--------|
 | kreativ_postgres | pgvector/pgvector:pg16 | Banco principal + embeddings RAG |
 | kreativ_redis | redis:7-alpine | Cache, idempotência, sessões |
-| kreativ_evolution | atendai/evolution-api:v2.2.3 | Conector WhatsApp (Baileys unofficial) |
+| kreativ_evolution | atendai/evolution-api:v2.2.3 | Conector WhatsApp (Meta Cloud API) |
 | kreativ_n8n | n8nio/n8n:latest | Automação e lógica de negócio |
 | kreativ_typebot_builder | typebot/builder:latest | Editor visual do bot |
 | kreativ_typebot_viewer | typebot/viewer:latest | Runtime do bot (executa fluxo) |
@@ -116,9 +116,10 @@ Typebot `Choice Input` blocks renderizam como **texto com emojis**, não como bo
 - Solução imediata: usar texto com sintaxe `[buttons]` suportada pela Evolution API (Baileys)
 - Solução definitiva: migrar para Cloud API Meta (suporte a botões oficiais)
 
-### Evolution API — Baileys vs Cloud API
-- Atual (Baileys): unofficial, pode ser bloqueado pela Meta, limitações em mídias ricas
-- Cloud API Meta: oficial, suporte a botões/listas interativas, requer aprovação Meta Business
+### Evolution API — Cloud API Meta
+- **Status:** Ativo (v0.4.1)
+- **Vantagem:** Oficial, suporte a botões/listas interativas, maior estabilidade.
+- **Configuração:** Instância `europs` operando com `integration: "WHATSAPP-BUSINESS"`.
 
 ### RAG
 - `document_chunks` existe mas está vazio (0 rows)
@@ -126,7 +127,7 @@ Typebot `Choice Input` blocks renderizam como **texto com emojis**, não como bo
 
 ## Roadmap Próximos Passos
 
-- **Fase 3A:** Corrigir renderização de botões (texto `[buttons]`/`[list]` no Typebot)
+- **Fase 3A:** ✅ RESOLVIDO — Renderização de botões (Cloud API + `[buttons]`)
 - **Fase 3B:** Implementar avaliação DeepSeek no `submit_quiz` do N8N
 - **Fase 4:** Popular RAG (`document_chunks`) com conteúdo dos cursos
-- **Fase 5:** Migrar Evolution para Cloud API Meta (botões oficiais)
+- **Fase 5:** ✅ RESOLVIDO — Migrar Evolution para Cloud API Meta

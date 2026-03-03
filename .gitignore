@@ -7,6 +7,10 @@ npm-debug.log*
 .env
 .env.local
 .env.production
+.env.frappe
+*.env
+*.env.frappe
+frappe_api_keys.txt
 
 # Editor
 .vscode/
@@ -63,3 +67,18 @@ n8n-workflows/*.sh
 
 # Evitar typebot legados
 typebot-*-test.json
+
+# Cache e temporários
+__pycache__/
+*.pyc
+.claude/
+.gemini/
+.agent/
+.agents/
+brain/
+*.log
+package-lock.json.bak
+node_modules/
+dist/
+build/
+.next/

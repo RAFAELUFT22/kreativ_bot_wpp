@@ -26,6 +26,7 @@ interface StudentData {
     course_id: number | null
     current_module: number
     completed_modules: number[]
+    scores: Record<string, number>
     lead_score: number
     attendance_status: string
 }
@@ -53,6 +54,7 @@ export const getServerSideProps: GetServerSideProps = async ({ params }) => {
         const { rows: studentRows } = await pool.query(`
             SELECT s.name, s.phone, s.current_module,
                    COALESCE(s.completed_modules, '{}') as completed_modules,
+                   COALESCE(s.scores, '{}') as scores,
                    s.lead_score, s.attendance_status, s.course_id,
                    COALESCE(c.name, 'Kreativ Educação') as course_name
             FROM students s
@@ -99,6 +101,7 @@ export const getServerSideProps: GetServerSideProps = async ({ params }) => {
                     course_id: student.course_id,
                     current_module: student.current_module || 1,
                     completed_modules: student.completed_modules || [],
+                    scores: student.scores || {},
                     lead_score: student.lead_score || 0,
                     attendance_status: student.attendance_status || 'bot',
                 },
@@ -128,7 +131,7 @@ function ProgressBar({ value, max }: { value: number; max: number }) {
     )
 }
 
-function ModuleCard({ mod, completed, current }: { mod: ModuleStatus; completed: boolean; current: boolean }) {
+function ModuleCard({ mod, completed, current, score }: { mod: ModuleStatus; completed: boolean; current: boolean; score?: number }) {
     const locked = !completed && !current
     const icon = completed ? '✅' : current ? '▶️' : '🔒'
 
@@ -152,6 +155,11 @@ function ModuleCard({ mod, completed, current }: { mod: ModuleStatus; completed:
                 <div style={{ fontWeight: 700, fontSize: '15px', marginBottom: '4px' }}>{mod.title}</div>
                 {mod.description && (
                     <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{mod.description}</div>
+                )}
+                {completed && score != null && (
+                    <div style={{ marginTop: '6px', fontSize: '12px', color: 'rgba(100,200,100,0.9)', fontWeight: 600 }}>
+                        Nota: {score}/100
+                    </div>
                 )}
                 {current && (
                     <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--gold)', fontWeight: 600 }}>
@@ -277,12 +285,14 @@ export default function AlunoDashboard({ student, modules, certificates, token }
                             {modules.map((mod) => {
                                 const done = completedSet.has(mod.module_number)
                                 const isCurrent = mod.module_number === student.current_module && !done
+                                const modScore = student.scores[`module_${mod.module_number}`]
                                 return (
                                     <ModuleCard
                                         key={mod.id}
                                         mod={mod}
                                         completed={done}
                                         current={isCurrent}
+                                        score={modScore}
                                     />
                                 )
                             })}

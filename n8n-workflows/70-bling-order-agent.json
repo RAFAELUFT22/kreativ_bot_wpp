@@ -1,0 +1,247 @@
+{
+    "name": "Norte Piscinas: Bling Order AI Agent (OpenRouter + Payments)",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "bling-order-agent",
+                "responseMode": "responseNode",
+                "options": {}
+            },
+            "name": "Webhook: From Typebot",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                0,
+                0
+            ]
+        },
+        {
+            "parameters": {
+                "agent": "conversational",
+                "prompt": "={{ $json.body.message }}",
+                "systemPrompt": "Você é o Especialista de Vendas e Consultor da Norte Piscinas. Sua missão é transformar a área de lazer do cliente em um paraíso.\n\nDIRETRIZES DE PERSONA:\n- Voz: Profissional, prestativa, entusiasmada e clara.\n- Atitude: Vendedor Consultivo. Se o cliente pedir um item, verifique se ele precisa de acessórios ou complementos (ex: estojo de teste para cloro, peneira para piscina).\n- Fechamento: Facilite o pagamento. Ofereça PIX, Boleto ou Cartão de Crédito assim que o pedido for confirmado.\n\nFLUXO OPERACIONAL:\n1. CONSULTORIA: Entenda o que o cliente busca. Use 'search_products' para listar opções com preços reais. Confirme as quantidades.\n2. IDENTIFICAÇÃO: Antes de fechar, verifique se o cliente já existe via Telefone ou Documento usando 'manage_contact'. Se não existir, peça os dados necessários (Nome, CPF/CNPJ, Endereço completo com CEP).\n3. REGISTRO: Com todos os dados e produtos confirmados, use 'create_order'. Isso gera o pedido no Bling e no banco local.\n4. PAGAMENTO: Pergunte 'PIX, Boleto ou Cartão?'. Gere o código ou link usando 'generate_pix', 'generate_boleto' ou 'generate_card'.\n5. CONCLUSÃO: Envie o código/link de pagamento e informe que o pedido entrará em separação após a confirmação.\n\nREGRAS DE OURO:\n- Nunca invente preços. Use as ferramentas.\n- Use emojis de forma moderada para ser amigável.\n- Se o cliente quiser falar com um humano, use a ferramenta 'request_human' (se disponível) ou encaminhe-o.",
+                "options": {}
+            },
+            "name": "AI Agent",
+            "type": "@n8n/n8n-nodes-langchain.agent",
+            "typeVersion": 1.6,
+            "position": [
+                250,
+                0
+            ]
+        },
+        {
+            "parameters": {
+                "name": "search_products",
+                "description": "Busca produtos no catálogo pelo nome ou SKU. Retorna preço e estoque.",
+                "method": "GET",
+                "url": "https://api.nortepiscinas.net/products",
+                "sendQuery": true,
+                "queryParameters": {
+                    "parameters": [
+                        {
+                            "name": "search",
+                            "value": "{{ $parameter.query }}"
+                        }
+                    ]
+                }
+            },
+            "name": "Tool: Search Products",
+            "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+            "typeVersion": 1,
+            "position": [
+                500,
+                -200
+            ]
+        },
+        {
+            "parameters": {
+                "name": "manage_contact",
+                "description": "Busca ou cria um contato no sistema. Requer nome, document (CPF/CNPJ) e telefone.",
+                "method": "POST",
+                "url": "https://api.nortepiscinas.net/bling/contatos",
+                "sendBody": true,
+                "jsonBody": "={{ JSON.stringify($parameter.customerData) }}"
+            },
+            "name": "Tool: Manage Contact",
+            "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+            "typeVersion": 1,
+            "position": [
+                500,
+                -100
+            ]
+        },
+        {
+            "parameters": {
+                "name": "create_order",
+                "description": "Cria o pedido oficial no e-commerce e no Bling. Requer customer_id e lista de items (product_id, quantity).",
+                "method": "POST",
+                "url": "https://api.nortepiscinas.net/orders",
+                "sendBody": true,
+                "jsonBody": "={{ JSON.stringify($parameter.orderData) }}"
+            },
+            "name": "Tool: Create Order",
+            "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+            "typeVersion": 1,
+            "position": [
+                500,
+                0
+            ]
+        },
+        {
+            "parameters": {
+                "name": "generate_pix",
+                "description": "Gera um QR Code PIX via Asaas para um pedido existente. Requer order_id.",
+                "method": "POST",
+                "url": "https://api.nortepiscinas.net/payments/pix",
+                "sendBody": true,
+                "jsonBody": "={{ JSON.stringify({ order_id: $parameter.order_id }) }}"
+            },
+            "name": "Tool: Generate PIX",
+            "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+            "typeVersion": 1,
+            "position": [
+                500,
+                100
+            ]
+        },
+        {
+            "parameters": {
+                "name": "generate_boleto",
+                "description": "Gera um boleto via Asaas para um pedido existente. Requer order_id.",
+                "method": "POST",
+                "url": "https://api.nortepiscinas.net/payments/boleto",
+                "sendBody": true,
+                "jsonBody": "={{ JSON.stringify({ order_id: $parameter.order_id }) }}"
+            },
+            "name": "Tool: Generate Boleto",
+            "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+            "typeVersion": 1,
+            "position": [
+                500,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "name": "generate_card",
+                "description": "Inicia o pagamento via Cartão de Crédito no Asaas. Requer order_id e dados do cartão.",
+                "method": "POST",
+                "url": "https://api.nortepiscinas.net/payments/card",
+                "sendBody": true,
+                "jsonBody": "={{ JSON.stringify($parameter.paymentData) }}"
+            },
+            "name": "Tool: Generate Card",
+            "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+            "typeVersion": 1,
+            "position": [
+                500,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "model": "openai/gpt-4o",
+                "options": {
+                    "temperature": 0.7
+                }
+            },
+            "name": "OpenRouter Chat Model",
+            "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+            "typeVersion": 1,
+            "position": [
+                250,
+                200
+            ],
+            "credentials": {
+                "openRouterApi": {
+                    "id": "your-openrouter-id"
+                }
+            }
+        }
+    ],
+    "connections": {
+        "Webhook: From Typebot": {
+            "main": [
+                [
+                    {
+                        "node": "AI Agent",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Tool: Search Products": {
+            "ai_tool": [
+                [
+                    {
+                        "node": "AI Agent",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Tool: Manage Contact": {
+            "ai_tool": [
+                [
+                    {
+                        "node": "AI Agent",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Tool: Create Order": {
+            "ai_tool": [
+                [
+                    {
+                        "node": "AI Agent",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Tool: Generate PIX": {
+            "ai_tool": [
+                [
+                    {
+                        "node": "AI Agent",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Tool: Generate Boleto": {
+            "ai_tool": [
+                [
+                    {
+                        "node": "AI Agent",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Tool: Generate Card": {
+            "ai_tool": [
+                [
+                    {
+                        "node": "AI Agent",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "OpenRouter Chat Model": {
+            "ai_languageModel": [
+                [
+                    {
+                        "node": "AI Agent",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {}
+}

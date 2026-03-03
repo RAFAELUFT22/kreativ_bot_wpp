@@ -1,4 +1,4 @@
-import json
+coimport json
 import os
 
 path = '/root/ideias_app/n8n-workflows/60-kreativ-api-ultimate.json'

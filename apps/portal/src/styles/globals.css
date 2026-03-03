@@ -132,3 +132,52 @@ body {
 .cert-info { color: var(--text-muted); line-height: 2; margin-bottom: 32px; }
 .cert-info strong { color: var(--text); }
 .cert-id { font-size: 12px; color: var(--text-muted); margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--border); }
+
+/* ===== Admin ===== */
+.admin-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.admin-table th {
+  text-align: left; padding: 12px 8px;
+  color: var(--text-muted); font-weight: 600; font-size: 12px;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--border);
+}
+.admin-table td { padding: 12px 8px; border-bottom: 1px solid var(--border); }
+.admin-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+.admin-input {
+  padding: 10px 14px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--bg2);
+  color: var(--text); font-size: 14px; font-family: var(--font);
+  outline: none; width: 100%; transition: border-color 0.2s;
+}
+.admin-input:focus { border-color: var(--gold); }
+
+.admin-textarea {
+  padding: 12px 14px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--bg2);
+  color: var(--text); font-size: 14px; font-family: var(--font);
+  outline: none; width: 100%; min-height: 120px; resize: vertical;
+  line-height: 1.6; transition: border-color 0.2s;
+}
+.admin-textarea:focus { border-color: var(--gold); }
+
+.admin-select {
+  padding: 10px 14px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--bg2);
+  color: var(--text); font-size: 14px; font-family: var(--font);
+  outline: none; cursor: pointer;
+}
+
+.admin-toggle {
+  display: inline-flex; align-items: center; gap: 8px;
+  cursor: pointer; font-size: 14px;
+}
+
+.admin-badge {
+  display: inline-flex; padding: 2px 10px; border-radius: 40px;
+  font-size: 11px; font-weight: 600;
+}
+.admin-badge.success { background: rgba(100,200,100,0.15); color: #7dcf7d; }
+.admin-badge.warning { background: rgba(232,169,0,0.15); color: var(--gold); }
+.admin-badge.danger { background: rgba(232,100,50,0.15); color: #e86432; }
+.admin-badge.info { background: rgba(56,139,253,0.12); color: var(--accent); }

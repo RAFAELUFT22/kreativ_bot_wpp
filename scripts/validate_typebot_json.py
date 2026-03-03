@@ -5,7 +5,7 @@ def validate_typebot(data):
     errors = []
     
     # Root level checks
-    for key in ["groups", "events", "edges"]:
+    for key in ["groups", "events", "edges", "variables"]:
         if key not in data:
             errors.append(f"Missing '{key}' in root")
             
@@ -17,21 +17,33 @@ def validate_typebot(data):
     if not groups:
         errors.append("No groups found")
     else:
-        # Check start group
+        # Check start block in the first group
         start_group = groups[0]
         has_start_block = any(b.get("type") == "start" for b in start_group.get("blocks", []))
         if not has_start_block:
-            errors.append("First group must contain a block with type='start'")
+            errors.append("First group (groups[0]) must contain a block with type='start'")
 
-    # Blocks checks
+    # Groups checks
     for i, g in enumerate(groups):
+        if "graphCoordinates" not in g:
+            errors.append(f"Group '{g.get('title', i)}' missing 'graphCoordinates'")
+            
         blocks = g.get("blocks", [])
         for b in blocks:
             b_type = b.get("type")
-            if b_type == "condition":
-                errors.append(f"Block '{b.get('id')}' in group '{g.get('title')}' uses 'condition' instead of 'Condition'")
-            if b_type == "Webhook":
-                errors.append(f"Block '{b.get('id')}' in group '{g.get('title')}' uses 'Webhook' instead of 'webhook'")
+            
+            # RichText check for text blocks
+            if b_type == "text":
+                content = b.get("content", {})
+                rt = content.get("richText")
+                if not isinstance(rt, list):
+                    errors.append(f"Block '{b.get('id')}' richText must be a list")
+
+            # Type mapping checks
+            if b_type == "Choice":
+                errors.append(f"Block '{b.get('id')}' uses legacy 'Choice' instead of 'choice input'")
+            if b_type == "webhook":
+                errors.append(f"Block '{b.get('id')}' uses lowercase 'webhook' (client-side) instead of 'Webhook' (server-side)")
                 
             # Check edge items
             if b_type in ["Condition", "choice input"]:
@@ -42,15 +54,14 @@ def validate_typebot(data):
 
     # Edge checks
     edges = data.get("edges", [])
-    events = {e["id"]: e for e in data.get("events", [])}
-    
     for edge in edges:
+        to = edge.get("to", {})
+        if "groupId" not in to:
+            errors.append(f"Edge '{edge.get('id')}' missing 'groupId' in 'to'. Edges must point to groups.")
+        
         frm = edge.get("from", {})
-        if "eventId" in frm:
-            if frm["eventId"] not in events:
-                errors.append(f"Edge '{edge.get('id')}' references missing eventId '{frm['eventId']}'")
-        elif "blockId" not in frm:
-            errors.append(f"Edge '{edge.get('id')}' missing blockId or eventId in 'from'")
+        if "eventId" not in frm and "blockId" not in frm:
+            errors.append(f"Edge '{edge.get('id')}' missing source (blockId or eventId) in 'from'")
 
     return errors
 
@@ -63,7 +74,6 @@ if __name__ == "__main__":
         with open(sys.argv[1], "r", encoding="utf-8") as f:
             data = json.load(f)
             
-        # Handle export wrapper if present
         if "typebot" in data:
             data = data["typebot"]
             

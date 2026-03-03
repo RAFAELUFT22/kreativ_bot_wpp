@@ -1,0 +1,176 @@
+{
+  "name": "Kreativ: TDS Form Handler",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "submit-tds-form",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "id": "webhook-id"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body;
+const cpf = String(body.cpf || '').replace(/\D/g, '');
+
+if (cpf.length !== 11) {
+  throw new Error('CPF Inválido: Deve conter 11 dígitos.');
+}
+
+// Basic data cleaning
+return [{
+  json: {
+    ...body,
+    cpf,
+    idade: parseInt(body.idade) || null,
+    num_pessoas_domicilio: parseInt(body.num_pessoas_domicilio) || 0,
+    num_criancas: parseInt(body.num_criancas) || 0,
+    num_adolescentes: parseInt(body.num_adolescentes) || 0,
+    num_idosos: parseInt(body.num_idosos) || 0,
+    renda_pessoal_valor: parseFloat(String(body.renda_pessoal_valor || '0').replace(',', '.')) || 0,
+    renda_familiar_valor: parseFloat(String(body.renda_familiar_valor || '0').replace(',', '.')) || 0,
+    ip_address: $node["Webhook"].json.headers["x-real-ip"] || $node["Webhook"].json.headers["x-forwarded-for"] || 'unknown',
+    user_agent: $node["Webhook"].json.headers["user-agent"]
+  }
+}];"
+      },
+      "name": "Validate & Sanitize",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [450, 300],
+      "id": "sanitize-id"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id FROM pre_inscriptions_tds WHERE cpf = '{{ $json.cpf }}' LIMIT 1"
+      },
+      "name": "Check Duplicate",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [650, 300],
+      "id": "check-dup-id",
+      "credentials": {
+        "postgres": {
+          "id": "lJaeEy4CpHbhgMAp",
+          "name": "Kreativ PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.id }}",
+              "operator": {
+                "type": "string",
+                "operation": "exists"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "If Duplicate",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [850, 300],
+      "id": "if-dup-id"
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": "public",
+        "table": "pre_inscriptions_tds",
+        "columns": [
+          "nome_completo", "cpf", "municipio", "bairro_assentamento", "estado", 
+          "curso_escolhido", "sexo", "idade", "estado_civil", "num_pessoas_domicilio",
+          "num_criancas", "num_adolescentes", "num_idosos", "cor_raca", "quilombola",
+          "escolaridade", "inscrito_cadunico", "beneficios_sociais", "casa_possui",
+          "situacao_ocupacional", "renda_pessoal_faixa", "renda_pessoal_valor",
+          "renda_familiar_faixa", "renda_familiar_valor", "desenvolve_atividade_produtiva",
+          "tipo_atividade_produtiva", "agro_area_ha", "agro_produtos", "agro_possui_dap_caf",
+          "agro_destino_producao", "agro_renda_mensal_valor", "dificuldades_produzir",
+          "dificuldades_vender", "possui_conta_bancaria", "possui_conta_digital",
+          "tomou_microcredito", "interesse_credito_produtivo", "finalidade_credito",
+          "organizacoes_locais", "organizacoes_locais_desc", "acessou_politica_publica",
+          "politicas_acessadas", "forma_acesso_politica", "conhece_outras_politicas",
+          "dificuldades_acesso_politica", "opiniao_politica_diferenca", "acredita_projeto_ajuda",
+          "curso_mercado_trabalho", "curso_atividade_produtiva", "ip_address", "user_agent"
+        ]
+      },
+      "name": "Insert Data",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [1050, 450],
+      "id": "insert-id",
+      "credentials": {
+        "postgres": {
+          "id": "lJaeEy4CpHbhgMAp",
+          "name": "Kreativ PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ "success": true, "message": "Inscrição realizada com sucesso!" }",
+        "options": {}
+      },
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1250, 450],
+      "id": "resp-success-id"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ "success": false, "message": "Este CPF já possui uma inscrição ativa no Programa TDS." }",
+        "options": {
+          "responseCode": 409
+        }
+      },
+      "name": "Respond Duplicate",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1050, 150],
+      "id": "resp-dup-id"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Validate & Sanitize", "type": "main", "index": 0 }]]
+    },
+    "Validate & Sanitize": {
+      "main": [[{ "node": "Check Duplicate", "type": "main", "index": 0 }]]
+    },
+    "Check Duplicate": {
+      "main": [[{ "node": "If Duplicate", "type": "main", "index": 0 }]]
+    },
+    "If Duplicate": {
+      "main": [
+        [{ "node": "Respond Duplicate", "type": "main", "index": 0 }],
+        [{ "node": "Insert Data", "type": "main", "index": 0 }]
+      ]
+    },
+    "Insert Data": {
+      "main": [[{ "node": "Respond Success", "type": "main", "index": 0 }]]
+    }
+  }
+}

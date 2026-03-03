@@ -30,8 +30,9 @@ export const getServerSideProps: GetServerSideProps = async () => {
       SELECT m.id, m.title, m.description, m.module_number,
         COALESCE(c.name, m.course_id) as course_name
       FROM modules m
-      LEFT JOIN courses c ON c.id::text = m.course_id
-      ORDER BY m.module_number ASC
+      LEFT JOIN courses c ON c.id = m.course_int_id
+      WHERE m.is_published = TRUE
+      ORDER BY m.course_int_id, m.module_number ASC
       LIMIT 50
     `)
         return { props: { modules: rows } }

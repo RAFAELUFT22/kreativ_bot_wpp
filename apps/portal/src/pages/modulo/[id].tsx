@@ -4,6 +4,15 @@ import Link from 'next/link'
 import { Pool } from 'pg'
 import ReactMarkdown from 'react-markdown'
 
+interface ContentBlock {
+    order: number
+    type: 'text' | 'video' | 'audio' | 'pdf' | 'image' | 'divider'
+    content?: string
+    url?: string
+    caption?: string
+    label?: string
+}
+
 interface Module {
     id: string
     title: string
@@ -14,6 +23,7 @@ interface Module {
     course_int_id: number
     course_name: string
     media_urls: string[]
+    blocks: ContentBlock[] | null
 }
 
 interface Props {
@@ -112,78 +122,94 @@ export default function ModulePage({ module: mod, prevId, nextId }: Props) {
                     )}
                 </div>
 
-                {/* Vídeo YouTube se disponível */}
-                {youtubeId && (
-                    <div style={{ marginBottom: '32px' }}>
-                        <div style={{
-                            position: 'relative', paddingBottom: '56.25%', height: 0,
-                            borderRadius: 'var(--radius)', overflow: 'hidden',
-                            border: '1px solid var(--border)',
-                        }}>
-                            <iframe
-                                src={`https://www.youtube.com/embed/${youtubeId}`}
-                                title="Vídeo do módulo"
-                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                allowFullScreen
-                                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
-                            />
-                        </div>
+                {/* === Renderizacao por blocks JSONB (quando disponivel) === */}
+                {mod.blocks && mod.blocks.length > 0 ? (
+                    <div className="module-body">
+                        {[...mod.blocks].sort((a, b) => a.order - b.order).map((blk, i) => {
+                            if (blk.type === 'text' && blk.content) {
+                                return (
+                                    <div key={i} className="markdown-content">
+                                        <ReactMarkdown>{blk.content}</ReactMarkdown>
+                                    </div>
+                                )
+                            }
+                            if (blk.type === 'video' && blk.url) {
+                                const vid = getYoutubeId(blk.url)
+                                return vid ? (
+                                    <div key={i} style={{ marginBottom: '32px' }}>
+                                        {blk.caption && <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '8px' }}>{blk.caption}</p>}
+                                        <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, borderRadius: 'var(--radius)', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                                            <iframe src={`https://www.youtube.com/embed/${vid}`} title={blk.caption || 'Video'} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }} />
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div key={i} style={{ marginBottom: '16px' }}>
+                                        <a href={blk.url} target="_blank" rel="noopener noreferrer" className="btn btn-outline">🎥 {blk.caption || 'Assistir video'}</a>
+                                    </div>
+                                )
+                            }
+                            if (blk.type === 'audio' && blk.url) {
+                                return (
+                                    <div key={i} style={{ marginBottom: '24px', padding: '16px 20px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <span style={{ fontSize: '24px' }}>🎧</span>
+                                        <div style={{ flex: 1 }}>
+                                            {blk.caption && <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '6px' }}>{blk.caption}</div>}
+                                            <audio controls style={{ width: '100%', height: '40px' }}><source src={blk.url} /></audio>
+                                        </div>
+                                    </div>
+                                )
+                            }
+                            if (blk.type === 'pdf' && blk.url) {
+                                return (
+                                    <div key={i} style={{ marginBottom: '24px' }}>
+                                        <a href={blk.url} target="_blank" rel="noopener noreferrer" className="btn btn-outline" style={{ marginBottom: '12px', display: 'inline-block' }}>📄 {blk.caption || 'Baixar Apostila (PDF)'}</a>
+                                        <embed src={blk.url} type="application/pdf" width="100%" height="700px" style={{ borderRadius: 'var(--radius)', border: '1px solid var(--border)', display: 'block' }} />
+                                    </div>
+                                )
+                            }
+                            if (blk.type === 'image' && blk.url) {
+                                return <img key={i} src={blk.url} alt={blk.caption || 'Material do modulo'} style={{ width: '100%', borderRadius: 'var(--radius)', border: '1px solid var(--border)', marginBottom: '16px', display: 'block' }} />
+                            }
+                            if (blk.type === 'divider') {
+                                return <div key={i} style={{ margin: '32px 0', borderTop: '1px solid var(--border)', paddingTop: '16px', fontSize: '14px', color: 'var(--text-muted)', fontWeight: 600 }}>{blk.label || ''}</div>
+                            }
+                            return null
+                        })}
                     </div>
+                ) : (
+                    /* === Fallback: renderizacao legada por media_urls + content_text === */
+                    <>
+                        {youtubeId && (
+                            <div style={{ marginBottom: '32px' }}>
+                                <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, borderRadius: 'var(--radius)', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                                    <iframe src={`https://www.youtube.com/embed/${youtubeId}`} title="Video do modulo" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }} />
+                                </div>
+                            </div>
+                        )}
+                        {mediaUrls.filter((u: string) => u.toLowerCase().endsWith('.pdf')).map((u: string) => (
+                            <div key={u} style={{ marginBottom: '24px' }}>
+                                <a href={u} target="_blank" rel="noopener noreferrer" className="btn btn-outline" style={{ marginBottom: '12px', display: 'inline-block' }}>📄 Baixar Apostila (PDF)</a>
+                                <embed src={u} type="application/pdf" width="100%" height="700px" style={{ borderRadius: 'var(--radius)', border: '1px solid var(--border)', display: 'block' }} />
+                            </div>
+                        ))}
+                        {mediaUrls.filter((u: string) => /\.(mp3|wav|ogg|m4a)$/i.test(u)).map((u: string) => (
+                            <div key={u} style={{ marginBottom: '24px', padding: '16px 20px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <span style={{ fontSize: '24px' }}>🎧</span>
+                                <audio controls style={{ flex: 1, height: '40px' }}><source src={u} /></audio>
+                            </div>
+                        ))}
+                        {mediaUrls.filter((u: string) => /\.(jpg|jpeg|png|webp|gif)$/i.test(u)).map((u: string) => (
+                            <img key={u} src={u} alt="Material do modulo" style={{ width: '100%', borderRadius: 'var(--radius)', border: '1px solid var(--border)', marginBottom: '16px', display: 'block' }} />
+                        ))}
+                        <div className="module-body">
+                            {mod.content_text ? (
+                                <div className="markdown-content"><ReactMarkdown>{mod.content_text}</ReactMarkdown></div>
+                            ) : (
+                                <div className="centered" style={{ minHeight: '200px' }}><p>Conteudo em preparacao. Acesse pelo WhatsApp para a versao completa.</p></div>
+                            )}
+                        </div>
+                    </>
                 )}
-
-                {/* PDFs: botão de download + visualizador embed */}
-                {mediaUrls
-                    .filter((u: string) => u.toLowerCase().endsWith('.pdf'))
-                    .map((u: string) => (
-                        <div key={u} style={{ marginBottom: '24px' }}>
-                            <a
-                                href={u}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="btn btn-outline"
-                                style={{ marginBottom: '12px', display: 'inline-block' }}
-                            >
-                                📄 Baixar Apostila (PDF)
-                            </a>
-                            <embed
-                                src={u}
-                                type="application/pdf"
-                                width="100%"
-                                height="700px"
-                                style={{ borderRadius: 'var(--radius)', border: '1px solid var(--border)', display: 'block' }}
-                            />
-                        </div>
-                    ))}
-
-                {/* Imagens */}
-                {mediaUrls
-                    .filter((u: string) => /\.(jpg|jpeg|png|webp|gif)$/i.test(u))
-                    .map((u: string) => (
-                        <img
-                            key={u}
-                            src={u}
-                            alt="Material do módulo"
-                            style={{
-                                width: '100%',
-                                borderRadius: 'var(--radius)',
-                                border: '1px solid var(--border)',
-                                marginBottom: '16px',
-                                display: 'block',
-                            }}
-                        />
-                    ))}
-
-                <div className="module-body">
-                    {mod.content_text ? (
-                        <div className="markdown-content">
-                            <ReactMarkdown>{mod.content_text}</ReactMarkdown>
-                        </div>
-                    ) : (
-                        <div className="centered" style={{ minHeight: '200px' }}>
-                            <p>Conteúdo em preparação. Acesse pelo WhatsApp para a versão completa.</p>
-                        </div>
-                    )}
-                </div>
 
                 {/* CTA Quiz */}
                 <div style={{

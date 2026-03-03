@@ -1,0 +1,91 @@
+{
+    "name": "Frappe LMS Integration Example",
+    "nodes": [
+        {
+            "parameters": {},
+            "id": "1d8b9c2a-7e3f-4a1b-9c2d-8e4f5a6b7c8d",
+            "name": "When clicking \"Execute Workflow\"",
+            "type": "n8n-nodes-base.manualTrigger",
+            "typeVersion": 1,
+            "position": [
+                820,
+                340
+            ]
+        },
+        {
+            "parameters": {
+                "resource": "student",
+                "email": "test-student@example.com",
+                "firstName": "Test",
+                "lastName": "Student"
+            },
+            "id": "2e9c0d3b-8f4a-5b2c-0d3e-9f5a6b7c8d9e",
+            "name": "Register Student",
+            "type": "frappeLms",
+            "typeVersion": 1,
+            "position": [
+                1040,
+                340
+            ],
+            "credentials": {
+                "frappeLmsApi": {
+                    "id": "temp-creds-id",
+                    "name": "Kreativ Frappe LMS"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "resource": "enrollment",
+                "memberId": "={{ $node[\"Register Student\"].json[\"email\"] }}",
+                "courseId": "curso-exemplo-slug"
+            },
+            "id": "3f0d1e4c-9a5b-6c3d-1e4f-0a6b7c8d9e0f",
+            "name": "Enroll in Course",
+            "type": "frappeLms",
+            "typeVersion": 1,
+            "position": [
+                1260,
+                340
+            ],
+            "credentials": {
+                "frappeLmsApi": {
+                    "id": "temp-creds-id",
+                    "name": "Kreativ Frappe LMS"
+                }
+            }
+        }
+    ],
+    "connections": {
+        "When clicking \"Execute Workflow\"": {
+            "main": [
+                [
+                    {
+                        "node": "Register Student",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Register Student": {
+            "main": [
+                [
+                    {
+                        "node": "Enroll in Course",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "active": false,
+    "settings": {},
+    "versionId": "f7a8b9c0-d1e2-4f3g-h4i5-j6k7l8m9n0o1",
+    "id": "frappe-lms-example-wf",
+    "meta": {
+        "instanceId": "random-id"
+    },
+    "tags": []
+}

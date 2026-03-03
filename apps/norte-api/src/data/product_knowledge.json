@@ -1,0 +1,137 @@
+{
+    "chlorine": {
+        "premium_70": {
+            "name": "Cloro Premium 70",
+            "maintenance": 3.5,
+            "shock": 13,
+            "unit": "g/1000L",
+            "instructions": "Recircular por 1h. Aguardar 30 min (manutenção) ou até cloro < 4ppm (choque)."
+        },
+        "premium_65": {
+            "name": "Cloro Premium 65",
+            "maintenance": 4,
+            "shock": 14,
+            "unit": "g/1000L",
+            "instructions": "Recircular por 1h."
+        },
+        "superpremium": {
+            "name": "Cloro Superpremium",
+            "maintenance": 4,
+            "shock": 15,
+            "unit": "g/1000L",
+            "instructions": "Multifuncional. Recircular por 1h."
+        },
+        "multi_acao": {
+            "name": "Cloro Multiação",
+            "maintenance": 3,
+            "shock": 15,
+            "unit": "g/1000L",
+            "instructions": "3 em 1 (cloro, clarificante, algistático). Recircular 1h."
+        },
+        "faz": {
+            "name": "Cloro FAZ!",
+            "maintenance": 4,
+            "shock": 16,
+            "unit": "g/1000L",
+            "instructions": "Estabiliza pH e alcalinidade. Ideal para economia."
+        }
+    },
+    "algaecide": {
+        "manutencion": {
+            "name": "Algicida Manutenção",
+            "maintenance": 5,
+            "unit": "ml/1000L",
+            "instructions": "Usar 1x por semana. Intervalo de 8h após cloro."
+        },
+        "shock": {
+            "name": "Algicida Choque",
+            "shock": 7,
+            "unit": "ml/1000L",
+            "instructions": "Para eliminar algas (água verde). Recircular 2h."
+        },
+        "multi_acao": {
+            "name": "Algicida Multiação",
+            "maintenance": 3,
+            "shock": 7,
+            "unit": "ml/1000L",
+            "instructions": "Não contém cobre (não mancha). Substitui manutenção/choque."
+        }
+    },
+    "adjusters": {
+        "alkalinity_up": {
+            "name": "Elevador de Alcalinidade",
+            "dosages": [
+                {
+                    "level": "0-10ppm",
+                    "amount": 204,
+                    "unit": "g/m3"
+                },
+                {
+                    "level": "30ppm",
+                    "amount": 153,
+                    "unit": "g/m3"
+                },
+                {
+                    "level": "50ppm",
+                    "amount": 119,
+                    "unit": "g/m3"
+                },
+                {
+                    "level": "70ppm",
+                    "amount": 85,
+                    "unit": "g/m3"
+                }
+            ]
+        },
+        "ph_up": {
+            "name": "Barrilha / Elevador de pH",
+            "dosages": [
+                {
+                    "level": "6.8-7.0",
+                    "amount": 15,
+                    "unit": "g/m3"
+                },
+                {
+                    "level": "<6.8",
+                    "amount": 20,
+                    "unit": "g/m3"
+                }
+            ]
+        },
+        "ph_down": {
+            "name": "Diminuidor de pH e Alcalinidade",
+            "dosages": [
+                {
+                    "level": "Alcalinidade 200ppm",
+                    "amount": 160,
+                    "unit": "ml/m3"
+                },
+                {
+                    "level": "pH 8.0-8.3",
+                    "amount": 5,
+                    "unit": "ml/m3"
+                },
+                {
+                    "level": "pH 7.8-7.9",
+                    "amount": 3,
+                    "unit": "ml/m3"
+                }
+            ]
+        }
+    },
+    "clarifiers": {
+        "floc_plus_2in1": {
+            "name": "FlocPlus 2 em 1",
+            "clarify": 1.5,
+            "flocculate": 15,
+            "unit": "ml/1000L",
+            "instructions": "Clarificar: filtrar 6-8h. Decantar: repouso 12h, aspirar drenando."
+        },
+        "aluminate_sulfate": {
+            "name": "Sulfato de Alumínio",
+            "decant": 40,
+            "unit": "g/1000L",
+            "instructions": "Necessário usar Barrilha (16 a 40g/m3) em conjunto."
+        }
+    }
+}

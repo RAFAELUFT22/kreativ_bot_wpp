@@ -1,0 +1,715 @@
+{
+  "groups": [
+    {
+      "id": "group1",
+      "title": "Identificação",
+      "graphCoordinates": {
+        "x": 0,
+        "y": 0
+      },
+      "blocks": [
+        {
+          "id": "block1",
+          "type": "text input",
+          "options": {
+            "variableId": "nome",
+            "labels": {
+              "placeholder": "Digite seu nome completo",
+              "button": "Próximo"
+            }
+          },
+          "content": {
+            "richText": [
+              {
+                "type": "p",
+                "children": [
+                  {
+                    "text": "Por favor, informe seu nome completo:"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "block2",
+          "type": "text input",
+          "options": {
+            "variableId": "cpf",
+            "labels": {
+              "placeholder": "Digite seu CPF",
+              "button": "Próximo"
+            }
+          },
+          "content": {
+            "richText": [
+              {
+                "type": "p",
+                "children": [
+                  {
+                    "text": "Agora, informe seu CPF:"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "block3",
+          "type": "text input",
+          "options": {
+            "variableId": "municipio",
+            "labels": {
+              "placeholder": "Digite seu município",
+              "button": "Próximo"
+            }
+          },
+          "content": {
+            "richText": [
+              {
+                "type": "p",
+                "children": [
+                  {
+                    "text": "Em qual município você reside?"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "group2",
+      "title": "Perfil",
+      "graphCoordinates": {
+        "x": 300,
+        "y": 0
+      },
+      "blocks": [
+        {
+          "id": "block4",
+          "type": "choice input",
+          "options": {
+            "items": [
+              {
+                "id": "item1",
+                "content": "Masculino"
+              },
+              {
+                "id": "item2",
+                "content": "Feminino"
+              },
+              {
+                "id": "item3",
+                "content": "Outro"
+              }
+            ]
+          },
+          "content": {
+            "richText": [
+              {
+                "type": "p",
+                "children": [
+                  {
+                    "text": "Qual é o seu sexo?"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "block5",
+          "type": "text input",
+          "options": {
+            "variableId": "idade",
+            "labels": {
+              "placeholder": "Digite sua idade",
+              "button": "Próximo"
+            }
+          },
+          "content": {
+            "richText": [
+              {
+                "type": "p",
+                "children": [
+                  {
+                    "text": "Qual é a sua idade?"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "block6",
+          "type": "choice input",
+          "options": {
+            "items": [
+              {
+                "id": "item4",
+                "content": "Fundamental Incompleto"
+              },
+              {
+                "id": "item5",
+                "content": "Fundamental Completo"
+              },
+              {
+                "id": "item6",
+                "content": "Médio Incompleto"
+              },
+              {
+                "id": "item7",
+                "content": "Médio Completo"
+              },
+              {
+                "id": "item8",
+                "content": "Superior Incompleto"
+              },
+              {
+                "id": "item9",
+                "content": "Superior Completo"
+              },
+              {
+                "id": "item10",
+                "content": "Pós-graduação"
+              }
+            ]
+          },
+          "content": {
+            "richText": [
+              {
+                "type": "p",
+                "children": [
+                  {
+                    "text": "Qual é o seu nível de escolaridade?"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "group3",
+      "title": "Social",
+      "graphCoordinates": {
+        "x": 600,
+        "y": 0
+      },
+      "blocks": [
+        {
+          "id": "block7",
+          "type": "choice input",
+          "options": {
+            "items": [
+              {
+                "id": "item11",
+                "content": "Sim"
+              },
+              {
+                "id": "item12",
+                "content": "Não"
+              }
+            ]
+          },
+          "content": {
+            "richText": [
+              {
+                "type": "p",
+                "children": [
+                  {
+                    "text": "Você está cadastrado no CadÚnico?"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "block8",
+          "type": "text input",
+          "options": {
+            "variableId": "beneficios",
+            "labels": {
+              "placeholder": "Liste os benefícios recebidos",
+              "button": "Próximo"
+            }
+          },
+          "content": {
+            "richText": [
+              {
+                "type": "p",
+                "children": [
+                  {
+                    "text": "Quais benefícios sociais você recebe?"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "block9",
+          "type": "text input",
+          "options": {
+            "variableId": "infraestrutura",
+            "labels": {
+              "placeholder": "Descreva a infraestrutura local",
+              "button": "Próximo"
+            }
+          },
+          "content": {
+            "richText": [
+              {
+                "type": "p",
+                "children": [
+                  {
+                    "text": "Como é a infraestrutura básica na sua região (ex: água, luz, saneamento)?"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "group4",
+      "title": "Renda",
+      "graphCoordinates": {
+        "x": 900,
+        "y": 0
+      },
+      "blocks": [
+        {
+          "id": "block10",
+          "type": "choice input",
+          "options": {
+            "items": [
+              {
+                "id": "item13",
+                "content": "Até 1 salário mínimo"
+              },
+              {
+                "id": "item14",
+                "content": "1 a 2 salários mínimos"
+              },
+              {
+                "id": "item15",
+                "content": "2 a 3 salários mínimos"
+              },
+              {
+                "id": "item16",
+                "content": "Mais de 3 salários mínimos"
+              }
+            ]
+          },
+          "content": {
+            "richText": [
+              {
+                "type": "p",
+                "children": [
+                  {
+                    "text": "Qual é a sua renda pessoal mensal?"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "block11",
+          "type": "choice input",
+          "options": {
+            "items": [
+              {
+                "id": "item17",
+                "content": "Até 1 salário mínimo"
+              },
+              {
+                "id": "item18",
+                "content": "1 a 2 salários mínimos"
+              },
+              {
+                "id": "item19",
+                "content": "2 a 3 salários mínimos"
+              },
+              {
+                "id": "item20",
+                "content": "Mais de 3 salários mínimos"
+              }
+            ]
+          },
+          "content": {
+            "richText": [
+              {
+                "type": "p",
+                "children": [
+                  {
+                    "text": "Qual é a renda familiar mensal?"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "group5",
+      "title": "Atividade Produtiva",
+      "graphCoordinates": {
+        "x": 1200,
+        "y": 0
+      },
+      "blocks": [
+        {
+          "id": "block12",
+          "type": "choice input",
+          "options": {
+            "items": [
+              {
+                "id": "item21",
+                "content": "Agricultura"
+              },
+              {
+                "id": "item22",
+                "content": "Artesanato"
+              },
+              {
+                "id": "item23",
+                "content": "Pecuária"
+              },
+              {
+                "id": "item24",
+                "content": "Comércio"
+              },
+              {
+                "id": "item25",
+                "content": "Serviços"
+              },
+              {
+                "id": "item26",
+                "content": "Outro"
+              }
+            ]
+          },
+          "content": {
+            "richText": [
+              {
+                "type": "p",
+                "children": [
+                  {
+                    "text": "Qual é a sua principal atividade produtiva?"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "group6",
+      "title": "Crédito e Políticas Públicas",
+      "graphCoordinates": {
+        "x": 1500,
+        "y": 0
+      },
+      "blocks": [
+        {
+          "id": "block13",
+          "type": "text input",
+          "options": {
+            "variableId": "credito",
+            "labels": {
+              "placeholder": "Descreva seu acesso a crédito",
+              "button": "Próximo"
+            }
+          },
+          "content": {
+            "richText": [
+              {
+                "type": "p",
+                "children": [
+                  {
+                    "text": "Você tem acesso a crédito ou financiamento? Descreva:"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "block14",
+          "type": "text input",
+          "options": {
+            "variableId": "politicas_publicas",
+            "labels": {
+              "placeholder": "Liste políticas públicas que participa",
+              "button": "Enviar"
+            }
+          },
+          "content": {
+            "richText": [
+              {
+                "type": "p",
+                "children": [
+                  {
+                    "text": "Quais políticas públicas você participa ou conhece?"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "group7",
+      "title": "Envio",
+      "graphCoordinates": {
+        "x": 1800,
+        "y": 0
+      },
+      "blocks": [
+        {
+          "id": "block15",
+          "type": "Webhook",
+          "options": {
+            "method": "POST",
+            "url": "https://n8n.yourdomain.com/webhook/tds",
+            "headers": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": "{{{\"action\": \"submit_tds_form\", \"data\": {\"nome\": {{nome}}, \"cpf\": {{cpf}}, \"municipio\": {{municipio}}, \"sexo\": {{sexo}}, \"idade\": {{idade}}, \"escolaridade\": {{escolaridade}}, \"cadunico\": {{cadunico}}, \"beneficios\": {{beneficios}}, \"infraestrutura\": {{infraestrutura}}, \"renda_pessoal\": {{renda_pessoal}}, \"renda_familiar\": {{renda_familiar}}, \"atividade_produtiva\": {{atividade_produtiva}}, \"credito\": {{credito}}, \"politicas_publicas\": {{politicas_publicas}}}}}}"
+          },
+          "content": {
+            "richText": [
+              {
+                "type": "p",
+                "children": [
+                  {
+                    "text": "Enviando dados para o n8n..."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "variables": [
+    {
+      "id": "nome",
+      "name": "nome"
+    },
+    {
+      "id": "cpf",
+      "name": "cpf"
+    },
+    {
+      "id": "municipio",
+      "name": "municipio"
+    },
+    {
+      "id": "sexo",
+      "name": "sexo"
+    },
+    {
+      "id": "idade",
+      "name": "idade"
+    },
+    {
+      "id": "escolaridade",
+      "name": "escolaridade"
+    },
+    {
+      "id": "cadunico",
+      "name": "cadunico"
+    },
+    {
+      "id": "beneficios",
+      "name": "beneficios"
+    },
+    {
+      "id": "infraestrutura",
+      "name": "infraestrutura"
+    },
+    {
+      "id": "renda_pessoal",
+      "name": "renda_pessoal"
+    },
+    {
+      "id": "renda_familiar",
+      "name": "renda_familiar"
+    },
+    {
+      "id": "atividade_produtiva",
+      "name": "atividade_produtiva"
+    },
+    {
+      "id": "credito",
+      "name": "credito"
+    },
+    {
+      "id": "politicas_publicas",
+      "name": "politicas_publicas"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge1",
+      "from": {
+        "eventId": "start"
+      },
+      "to": {
+        "groupId": "group1"
+      }
+    },
+    {
+      "id": "edge2",
+      "from": {
+        "blockId": "block1"
+      },
+      "to": {
+        "blockId": "block2"
+      }
+    },
+    {
+      "id": "edge3",
+      "from": {
+        "blockId": "block2"
+      },
+      "to": {
+        "blockId": "block3"
+      }
+    },
+    {
+      "id": "edge4",
+      "from": {
+        "blockId": "block3"
+      },
+      "to": {
+        "groupId": "group2"
+      }
+    },
+    {
+      "id": "edge5",
+      "from": {
+        "blockId": "block4"
+      },
+      "to": {
+        "blockId": "block5"
+      }
+    },
+    {
+      "id": "edge6",
+      "from": {
+        "blockId": "block5"
+      },
+      "to": {
+        "blockId": "block6"
+      }
+    },
+    {
+      "id": "edge7",
+      "from": {
+        "blockId": "block6"
+      },
+      "to": {
+        "groupId": "group3"
+      }
+    },
+    {
+      "id": "edge8",
+      "from": {
+        "blockId": "block7"
+      },
+      "to": {
+        "blockId": "block8"
+      }
+    },
+    {
+      "id": "edge9",
+      "from": {
+        "blockId": "block8"
+      },
+      "to": {
+        "blockId": "block9"
+      }
+    },
+    {
+      "id": "edge10",
+      "from": {
+        "blockId": "block9"
+      },
+      "to": {
+        "groupId": "group4"
+      }
+    },
+    {
+      "id": "edge11",
+      "from": {
+        "blockId": "block10"
+      },
+      "to": {
+        "blockId": "block11"
+      }
+    },
+    {
+      "id": "edge12",
+      "from": {
+        "blockId": "block11"
+      },
+      "to": {
+        "groupId": "group5"
+      }
+    },
+    {
+      "id": "edge13",
+      "from": {
+        "blockId": "block12"
+      },
+      "to": {
+        "groupId": "group6"
+      }
+    },
+    {
+      "id": "edge14",
+      "from": {
+        "blockId": "block13"
+      },
+      "to": {
+        "blockId": "block14"
+      }
+    },
+    {
+      "id": "edge15",
+      "from": {
+        "blockId": "block14"
+      },
+      "to": {
+        "groupId": "group7"
+      }
+    }
+  ],
+  "events": [
+    {
+      "id": "start",
+      "type": "start",
+      "graphCoordinates": {
+        "x": -400,
+        "y": 0
+      },
+      "outgoingEdgeId": "edge1"
+    }
+  ]
+}

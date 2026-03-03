@@ -13,9 +13,12 @@ WhatsApp button support (Evolution API v2.2.3 + Cloud API Meta):
   - Use Contains conditions to route
 
 Usage:
-    python3 scripts/build_typebot.py
+    python3 scripts/build_typebot.py            # build + deploy
+    python3 scripts/build_typebot.py --dry-run  # preview only, no DB changes
 """
 import json, requests, subprocess, sys
+
+DRY_RUN = "--dry-run" in sys.argv
 
 # ─── Config ──────────────────────────────────────────────────────────────────
 BOT_ID     = "vnp6x9bqwrx54b2pct5dhqlb"
@@ -150,6 +153,8 @@ V = {
     "tutor_question":   "v_tutor_q",
     "menu_choice":      "v_menu",        # captures button/list reply title
     "quiz_raw_answer":  "v_quiz_raw",    # Captura todas as respostas em um bloco
+    "new_student_name": "v_new_name",    # nome do aluno no auto-enroll
+    "portal_url":       "v_portal_url",  # URL do portal retornada pelo enroll
 }
 
 variables = [{"id": vid, "name": name, "isSessionVariable": True}
@@ -209,6 +214,7 @@ edges += [
 ]
 
 # ── g1: Catraca — verifica cadastro e redireciona ─────────────────────────────
+# Flow: check_student → human? → g9 | NOT_FOUND? → g_enroll | else → g2 (menu)
 groups.append(group("g1", "Catraca", 100, 0, [
     tx("b_g1_load", "⏳ Verificando seu acesso..."),
     wb("b_g1_check", "check_student", {}, {
@@ -218,13 +224,39 @@ groups.append(group("g1", "Catraca", 100, 0, [
         "is_last_module":   "is_last_module",
         "course_completed": "course_completed",
     }),
-    cond("b_g1_cond", V["student_status"], "human",
-         "i_g1_human", "e_g1_human", "e_g1_bot"),
+    # Check 1: human handoff?
+    cond("b_g1_cond_human", V["student_status"], "human",
+         "i_g1_human", "e_g1_human", None, op="Equal to"),
+    # Check 2: NOT_FOUND → auto-enroll
+    cond("b_g1_cond_notfound", V["student_status"], "NOT_FOUND",
+         "i_g1_enroll", "e_g1_enroll", "e_g1_bot", op="Contains"),
 ]))
 edges += [
-    edge("e_g1_human", "b_g1_cond", "g9", "i_g1_human"),
-    edge("e_g1_bot",   "b_g1_cond", "g2"),
+    edge("e_g1_human",  "b_g1_cond_human",    "g9",       "i_g1_human"),
+    edge("e_g1_enroll", "b_g1_cond_notfound",  "g_enroll", "i_g1_enroll"),
+    edge("e_g1_bot",    "b_g1_cond_notfound",  "g2"),
 ]
+
+# ── g_enroll: Auto-enrollment para novos alunos ───────────────────────────────
+groups.append(group("g_enroll", "Auto-Enroll", 100, 400, [
+    tx("b_enr_welcome", "👋 *Bem-vindo(a) à Kreativ Educação!*\n\nVocê ainda não tem cadastro. Vamos criar agora — é rápido!"),
+    tx("b_enr_ask", "Qual é o seu nome?"),
+    inp("b_enr_name", V["new_student_name"], "Seu nome completo...", "Confirmar"),
+    tx("b_enr_saving", "⏳ Criando sua conta..."),
+    wb("b_enr_call", "enroll_student", {
+        "name": "{{new_student_name}}",
+        "course_int_id": 19,  # default: IA course — change per deployment
+    }, {
+        "student_name":   "name",
+        "portal_url":     "portal_url",
+        "current_module": "current_module",
+    }),
+    tx("b_enr_done",
+       "✅ Conta criada, {{student_name}}!\n\n"
+       "📱 Acesse seu portal pessoal:\n{{portal_url}}\n\n"
+       "Agora vamos ao menu principal!", "e_enr_g2"),
+]))
+edges.append(edge("e_enr_g2", "b_enr_done", "g2"))
 
 # ── g2: Menu Principal — botões interativos nativos WhatsApp ──────────────────
 # Blocos sequenciais:
@@ -374,6 +406,21 @@ edges_json     = json.dumps(edges).replace("'", "''")
 events_json    = json.dumps(events).replace("'", "''")
 
 print(f"Building: {len(groups)} groups, {len(edges)} edges, {len(variables)} variables")
+
+group_names = [g["title"] for g in groups]
+print(f"Groups: {', '.join(group_names)}")
+
+if DRY_RUN:
+    print("\n🔍 DRY RUN — no DB changes, no publish")
+    print(f"  Groups JSON: {len(groups_json)} chars")
+    print(f"  Edges JSON: {len(edges_json)} chars")
+    print(f"  Variables: {len(variables)}")
+    # Validate JSON
+    json.loads(groups_json.replace("''", "'"))
+    json.loads(edges_json.replace("''", "'"))
+    print("  JSON validation: ✅ valid")
+    sys.exit(0)
+
 print("Injecting directly into typebot_db...")
 
 psql(f"""
@@ -407,6 +454,9 @@ print(f"Publish: {p.status_code} {'✅' if p.ok else '❌ ' + p.text[:200]}")
 
 if p.ok:
     print(f"\n🚀 Bot live at: https://bot.extensionista.site/kreativ-educacao")
+    print("\nGroups:")
+    for g in groups:
+        print(f"  {g['id']:16s} → {g['title']}")
     print("\nMenu buttons (Cloud API Meta):")
     print("  'Meu Módulo'  → g3 (conteúdo do módulo)")
     print("  'Meu Progresso' → g5 (progresso)")
@@ -414,3 +464,4 @@ if p.ok:
     print("    'Tutor IA'  → g7")
     print("    'Tutor Humano' → g6 (handoff)")
     print("    'Voltar ao Menu' → g2")
+    print("  Auto-enroll → g_enroll (novos alunos)")

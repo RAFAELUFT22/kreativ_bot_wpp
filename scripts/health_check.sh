@@ -65,21 +65,14 @@ REDIS_PWD=$(grep REDIS_PASSWORD .env | cut -d '=' -f2)
 check_service "kreativ_redis" "redis-cli -a $REDIS_PWD ping" "PONG" "Redis"
 
 # 3. Evolution API Health
-check_http "kreativ_builderbot" "http://kreativ_evolution:8080/instance/health" "200" "Evolution API from BuilderBot"
+check_http "kreativ_n8n" "http://kreativ_evolution:8080/instance/health" "200" "Evolution API from n8n"
 
 # 4. n8n Health
-check_http "kreativ_builderbot" "http://kreativ_n8n:5678/healthz" "200" "n8n from BuilderBot"
+check_http "kreativ_evolution" "http://kreativ_n8n:5678/healthz" "200" "n8n from Evolution"
 
-# 5. BuilderBot Local Check
-# Using 'node -e' to check if port is listening if netstat is missing
-check_service "kreativ_builderbot" "netstat -tuln | grep :3008 || (nc -zv localhost 3008 2>&1)" "" "BuilderBot Listening on 3008"
-
-# 6. Chatwoot Health (App)
+# 5. Chatwoot Health (App)
 # Chatwoot might not have health endpoint, check root
 check_http "kreativ_n8n" "http://kreativ_chatwoot_app:3000" "200" "Chatwoot App from n8n"
-
-# 7. Check if BuilderBot can talk to Postgres
-check_service "kreativ_builderbot" "nc -zv kreativ_postgres 5432" "" "Postgres connection from BuilderBot"
 
 echo "=========================================================="
 echo "Health Check Complete."

@@ -36,7 +36,7 @@ export const getServerSideProps: GetServerSideProps = async ({ params }) => {
                 c.name as course_name
             FROM certificates cert
             JOIN students s ON s.id = cert.student_id
-            LEFT JOIN courses c ON c.id::text = cert.course_id
+            LEFT JOIN courses c ON c.id = COALESCE(cert.course_int_id, cert.course_id::int)
             WHERE cert.verification_code = $1
             LIMIT 1
         `, [certId])

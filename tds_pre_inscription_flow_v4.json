@@ -1,0 +1,454 @@
+{
+  "groups": [
+    {
+      "id": "g_start",
+      "graphCoordinates": {
+        "x": 0,
+        "y": 0
+      },
+      "blocks": [
+        {
+          "id": "start_block",
+          "type": "start",
+          "label": "Início"
+        }
+      ]
+    },
+    {
+      "id": "g_ident",
+      "graphCoordinates": {
+        "x": 200,
+        "y": 0
+      },
+      "blocks": [
+        {
+          "id": "ident_intro",
+          "type": "text",
+          "content": {
+            "richText": [
+              {
+                "type": "p",
+                "children": [
+                  {
+                    "text": "Vamos começar com seus dados de identificação."
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "nome_input",
+          "type": "text input",
+          "label": "Nome",
+          "options": {
+            "variableId": "var_nome"
+          }
+        },
+        {
+          "id": "cpf_input",
+          "type": "text input",
+          "label": "CPF",
+          "options": {
+            "variableId": "var_cpf"
+          }
+        },
+        {
+          "id": "municipio_input",
+          "type": "text input",
+          "label": "Município",
+          "options": {
+            "variableId": "var_municipio"
+          }
+        }
+      ]
+    },
+    {
+      "id": "g_perfil",
+      "graphCoordinates": {
+        "x": 400,
+        "y": 0
+      },
+      "blocks": [
+        {
+          "id": "perfil_intro",
+          "type": "text",
+          "content": {
+            "richText": [
+              {
+                "type": "p",
+                "children": [
+                  {
+                    "text": "Agora, seu perfil pessoal."
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "sexo_choice",
+          "type": "choice input",
+          "items": [
+            {
+              "id": "item_masculino",
+              "content": "Masculino"
+            },
+            {
+              "id": "item_feminino",
+              "content": "Feminino"
+            },
+            {
+              "id": "item_outro",
+              "content": "Outro"
+            }
+          ],
+          "options": {
+            "variableId": "var_sexo"
+          }
+        },
+        {
+          "id": "idade_input",
+          "type": "text input",
+          "label": "Idade",
+          "options": {
+            "variableId": "var_idade"
+          }
+        },
+        {
+          "id": "escolaridade_choice",
+          "type": "choice input",
+          "items": [
+            {
+              "id": "item_fundamental",
+              "content": "Fundamental"
+            },
+            {
+              "id": "item_medio",
+              "content": "Médio"
+            },
+            {
+              "id": "item_superior",
+              "content": "Superior"
+            },
+            {
+              "id": "item_pos",
+              "content": "Pós-graduação"
+            }
+          ],
+          "options": {
+            "variableId": "var_escolaridade"
+          }
+        }
+      ]
+    },
+    {
+      "id": "g_social",
+      "graphCoordinates": {
+        "x": 600,
+        "y": 0
+      },
+      "blocks": [
+        {
+          "id": "social_intro",
+          "type": "text",
+          "content": {
+            "richText": [
+              {
+                "type": "p",
+                "children": [
+                  {
+                    "text": "Informações sociais."
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "cadunico_choice",
+          "type": "choice input",
+          "items": [
+            {
+              "id": "item_sim_cad",
+              "content": "Sim"
+            },
+            {
+              "id": "item_nao_cad",
+              "content": "Não"
+            }
+          ],
+          "options": {
+            "variableId": "var_cadunico"
+          }
+        },
+        {
+          "id": "beneficios_choice",
+          "type": "choice input",
+          "items": [
+            {
+              "id": "item_bolsa",
+              "content": "Bolsa Família"
+            },
+            {
+              "id": "item_bpc",
+              "content": "BPC"
+            },
+            {
+              "id": "item_outro_ben",
+              "content": "Outro"
+            },
+            {
+              "id": "item_nenhum",
+              "content": "Nenhum"
+            }
+          ],
+          "options": {
+            "variableId": "var_beneficios"
+          }
+        }
+      ]
+    },
+    {
+      "id": "g_renda",
+      "graphCoordinates": {
+        "x": 800,
+        "y": 0
+      },
+      "blocks": [
+        {
+          "id": "renda_intro",
+          "type": "text",
+          "content": {
+            "richText": [
+              {
+                "type": "p",
+                "children": [
+                  {
+                    "text": "Dados de renda."
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "renda_pessoal_input",
+          "type": "text input",
+          "label": "Renda Pessoal (R$)",
+          "options": {
+            "variableId": "var_renda_pessoal"
+          }
+        },
+        {
+          "id": "renda_familiar_input",
+          "type": "text input",
+          "label": "Renda Familiar (R$)",
+          "options": {
+            "variableId": "var_renda_familiar"
+          }
+        }
+      ]
+    },
+    {
+      "id": "g_atividade",
+      "graphCoordinates": {
+        "x": 1000,
+        "y": 0
+      },
+      "blocks": [
+        {
+          "id": "atividade_intro",
+          "type": "text",
+          "content": {
+            "richText": [
+              {
+                "type": "p",
+                "children": [
+                  {
+                    "text": "Tipo de atividade."
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "atividade_choice",
+          "type": "choice input",
+          "items": [
+            {
+              "id": "item_emprego",
+              "content": "Emprego Formal"
+            },
+            {
+              "id": "item_informal",
+              "content": "Trabalho Informal"
+            },
+            {
+              "id": "item_autonomo",
+              "content": "Autônomo"
+            },
+            {
+              "id": "item_desempregado",
+              "content": "Desempregado"
+            },
+            {
+              "id": "item_estudante",
+              "content": "Estudante"
+            }
+          ],
+          "options": {
+            "variableId": "var_atividade"
+          }
+        }
+      ]
+    },
+    {
+      "id": "g_final",
+      "graphCoordinates": {
+        "x": 1200,
+        "y": 0
+      },
+      "blocks": [
+        {
+          "id": "final_text",
+          "type": "text",
+          "content": {
+            "richText": [
+              {
+                "type": "p",
+                "children": [
+                  {
+                    "text": "Obrigado! Enviando dados..."
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "webhook_submit",
+          "type": "Webhook",
+          "options": {
+            "url": "submit_tds_form",
+            "method": "POST"
+          }
+        }
+      ]
+    }
+  ],
+  "variables": [
+    {
+      "id": "var_nome",
+      "name": "Nome"
+    },
+    {
+      "id": "var_cpf",
+      "name": "CPF"
+    },
+    {
+      "id": "var_municipio",
+      "name": "Município"
+    },
+    {
+      "id": "var_sexo",
+      "name": "Sexo"
+    },
+    {
+      "id": "var_idade",
+      "name": "Idade"
+    },
+    {
+      "id": "var_escolaridade",
+      "name": "Escolaridade"
+    },
+    {
+      "id": "var_cadunico",
+      "name": "CadÚnico"
+    },
+    {
+      "id": "var_beneficios",
+      "name": "Benefícios"
+    },
+    {
+      "id": "var_renda_pessoal",
+      "name": "Renda Pessoal"
+    },
+    {
+      "id": "var_renda_familiar",
+      "name": "Renda Familiar"
+    },
+    {
+      "id": "var_atividade",
+      "name": "Atividade"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge_start_ident",
+      "from": {
+        "blockId": "start_block"
+      },
+      "to": {
+        "groupId": "g_ident"
+      }
+    },
+    {
+      "id": "edge_ident_perfil",
+      "from": {
+        "blockId": "municipio_input"
+      },
+      "to": {
+        "groupId": "g_perfil"
+      }
+    },
+    {
+      "id": "edge_perfil_social",
+      "from": {
+        "blockId": "escolaridade_choice"
+      },
+      "to": {
+        "groupId": "g_social"
+      }
+    },
+    {
+      "id": "edge_social_renda",
+      "from": {
+        "blockId": "beneficios_choice"
+      },
+      "to": {
+        "groupId": "g_renda"
+      }
+    },
+    {
+      "id": "edge_renda_atividade",
+      "from": {
+        "blockId": "renda_familiar_input"
+      },
+      "to": {
+        "groupId": "g_atividade"
+      }
+    },
+    {
+      "id": "edge_atividade_final",
+      "from": {
+        "blockId": "atividade_choice"
+      },
+      "to": {
+        "groupId": "g_final"
+      }
+    }
+  ],
+  "events": [
+    {
+      "id": "start",
+      "type": "start",
+      "graphCoordinates": {
+        "x": -400,
+        "y": 0
+      },
+      "outgoingEdgeId": "edge_start_ident"
+    }
+  ]
+}

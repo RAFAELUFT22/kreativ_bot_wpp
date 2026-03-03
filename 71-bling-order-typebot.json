@@ -1,0 +1,189 @@
+{
+  "groups": [
+    {
+      "id": "group1",
+      "title": "Início",
+      "graphCoordinates": {
+        "x": 0,
+        "y": 0
+      },
+      "blocks": [
+        {
+          "id": "block1",
+          "type": "start",
+          "label": "Início"
+        },
+        {
+          "id": "block2",
+          "type": "text",
+          "label": "Saudação",
+          "content": {
+            "richText": [
+              {
+                "type": "p",
+                "children": [
+                  {
+                    "text": "Olá! Bem-vindo à Norte Piscinas! 😊 Como posso ajudá-lo hoje?"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "block3",
+          "type": "text input",
+          "label": "Obter WhatsApp",
+          "options": {
+            "variableId": "whatsapp",
+            "labels": {
+              "placeholder": "Digite seu número de WhatsApp (ex: 5511999999999)",
+              "button": "Enviar"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "group2",
+      "title": "Processar Pedido",
+      "graphCoordinates": {
+        "x": 300,
+        "y": 0
+      },
+      "blocks": [
+        {
+          "id": "block4",
+          "type": "Webhook",
+          "label": "Enviar para n8n",
+          "options": {
+            "webhook": {
+              "id": "wh_block4",
+              "method": "POST",
+              "url": "https://n8n.extensionista.site/webhook/bling-order-agent",
+              "headers": [
+                {
+                  "id": "h_ct",
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\"phone\": \"{{whatsapp}}\", \"message\": \"{{userMessage}}\"}"
+            },
+            "isCustomBody": true,
+            "isExecutedOnClient": false,
+            "responseVariableMapping": [
+              {
+                "id": "m_block4_resp",
+                "variableId": "webhookResponse",
+                "bodyPath": "data.response"
+              }
+            ]
+          }
+        },
+        {
+          "id": "block5",
+          "type": "text",
+          "label": "Resposta da IA",
+          "content": {
+            "richText": [
+              {
+                "type": "p",
+                "children": [
+                  {
+                    "text": "{{webhookResponse}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "group3",
+      "title": "Loop de Conversa",
+      "graphCoordinates": {
+        "x": 600,
+        "y": 0
+      },
+      "blocks": [
+        {
+          "id": "block6",
+          "type": "text input",
+          "label": "Continuar Conversa",
+          "options": {
+            "variableId": "userMessage",
+            "labels": {
+              "placeholder": "Digite sua mensagem...",
+              "button": "Enviar"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variables": [
+    {
+      "id": "whatsapp",
+      "name": "whatsapp"
+    },
+    {
+      "id": "userMessage",
+      "name": "userMessage"
+    },
+    {
+      "id": "webhookResponse",
+      "name": "webhookResponse"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge1",
+      "from": {
+        "blockId": "block1"
+      },
+      "to": {
+        "groupId": "group1"
+      }
+    },
+    {
+      "id": "edge2",
+      "from": {
+        "blockId": "block3"
+      },
+      "to": {
+        "groupId": "group2"
+      }
+    },
+    {
+      "id": "edge3",
+      "from": {
+        "blockId": "block5"
+      },
+      "to": {
+        "groupId": "group3"
+      }
+    },
+    {
+      "id": "edge4",
+      "from": {
+        "blockId": "block6"
+      },
+      "to": {
+        "groupId": "group2"
+      }
+    }
+  ],
+  "events": [
+    {
+      "id": "start",
+      "type": "start",
+      "graphCoordinates": {
+        "x": -400,
+        "y": 0
+      },
+      "outgoingEdgeId": "edge1"
+    }
+  ]
+}

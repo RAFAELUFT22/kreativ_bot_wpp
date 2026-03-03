@@ -1,0 +1,514 @@
+{
+  "groups": [
+    {
+      "id": "group1",
+      "title": "Formulário TDS",
+      "blocks": [
+        {
+          "id": "startBlock",
+          "type": "start",
+          "label": "Início"
+        },
+        {
+          "id": "identificacaoBlock",
+          "type": "text",
+          "label": "Identificação",
+          "content": {
+            "richText": {
+              "children": [
+                {
+                  "text": "Vamos começar com sua identificação. Preencha os dados abaixo:"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "nomeInput",
+          "type": "text",
+          "label": "Nome",
+          "options": {
+            "isLong": false,
+            "placeholder": "Digite seu nome completo"
+          }
+        },
+        {
+          "id": "cpfInput",
+          "type": "text",
+          "label": "CPF",
+          "options": {
+            "isLong": false,
+            "placeholder": "Digite seu CPF (apenas números)",
+            "mask": "999.999.999-99"
+          }
+        },
+        {
+          "id": "municipioInput",
+          "type": "text",
+          "label": "Município",
+          "options": {
+            "isLong": false,
+            "placeholder": "Digite seu município"
+          }
+        },
+        {
+          "id": "perfilBlock",
+          "type": "text",
+          "label": "Perfil",
+          "content": {
+            "richText": {
+              "children": [
+                {
+                  "text": "Agora, informe seu perfil:"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "sexoChoice",
+          "type": "Choice",
+          "label": "Sexo",
+          "items": [
+            {
+              "id": "masculino",
+              "content": "Masculino"
+            },
+            {
+              "id": "feminino",
+              "content": "Feminino"
+            },
+            {
+              "id": "outro",
+              "content": "Outro"
+            }
+          ]
+        },
+        {
+          "id": "idadeInput",
+          "type": "text",
+          "label": "Idade",
+          "options": {
+            "isLong": false,
+            "placeholder": "Digite sua idade"
+          }
+        },
+        {
+          "id": "escolaridadeChoice",
+          "type": "Choice",
+          "label": "Escolaridade",
+          "items": [
+            {
+              "id": "fundamental",
+              "content": "Fundamental Incompleto"
+            },
+            {
+              "id": "medio",
+              "content": "Médio Completo"
+            },
+            {
+              "id": "superior",
+              "content": "Superior Completo"
+            },
+            {
+              "id": "pos",
+              "content": "Pós-graduação"
+            }
+          ]
+        },
+        {
+          "id": "socialBlock",
+          "type": "text",
+          "label": "Social",
+          "content": {
+            "richText": {
+              "children": [
+                {
+                  "text": "Informações sociais:"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "cadUnicoChoice",
+          "type": "Choice",
+          "label": "CadÚnico",
+          "items": [
+            {
+              "id": "simCadUnico",
+              "content": "Sim"
+            },
+            {
+              "id": "naoCadUnico",
+              "content": "Não"
+            }
+          ]
+        },
+        {
+          "id": "beneficiosInput",
+          "type": "text",
+          "label": "Benefícios",
+          "options": {
+            "isLong": true,
+            "placeholder": "Quais benefícios recebe?"
+          }
+        },
+        {
+          "id": "infraestruturaInput",
+          "type": "text",
+          "label": "Infraestrutura",
+          "options": {
+            "isLong": true,
+            "placeholder": "Descreva a infraestrutura local"
+          }
+        },
+        {
+          "id": "rendaBlock",
+          "type": "text",
+          "label": "Renda",
+          "content": {
+            "richText": {
+              "children": [
+                {
+                  "text": "Informações de renda:"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "rendaPessoalChoice",
+          "type": "Choice",
+          "label": "Renda Pessoal",
+          "items": [
+            {
+              "id": "ate1sm",
+              "content": "Até 1 salário mínimo"
+            },
+            {
+              "id": "1a2sm",
+              "content": "1 a 2 salários mínimos"
+            },
+            {
+              "id": "mais2sm",
+              "content": "Mais de 2 salários mínimos"
+            }
+          ]
+        },
+        {
+          "id": "rendaFamiliarInput",
+          "type": "text",
+          "label": "Renda Familiar",
+          "options": {
+            "isLong": false,
+            "placeholder": "Renda familiar total"
+          }
+        },
+        {
+          "id": "atividadeBlock",
+          "type": "text",
+          "label": "Atividade Produtiva",
+          "content": {
+            "richText": {
+              "children": [
+                {
+                  "text": "Atividade produtiva:"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "atividadeChoice",
+          "type": "Choice",
+          "label": "Atividade",
+          "items": [
+            {
+              "id": "agro",
+              "content": "Agropecuária"
+            },
+            {
+              "id": "artesanato",
+              "content": "Artesanato"
+            },
+            {
+              "id": "comercio",
+              "content": "Comércio"
+            },
+            {
+              "id": "outraAtividade",
+              "content": "Outra"
+            }
+          ]
+        },
+        {
+          "id": "creditoBlock",
+          "type": "text",
+          "label": "Crédito",
+          "content": {
+            "richText": {
+              "children": [
+                {
+                  "text": "Informações sobre crédito:"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "creditoInput",
+          "type": "text",
+          "label": "Crédito",
+          "options": {
+            "isLong": true,
+            "placeholder": "Necessidades ou acesso a crédito"
+          }
+        },
+        {
+          "id": "politicasBlock",
+          "type": "text",
+          "label": "Políticas Públicas",
+          "content": {
+            "richText": {
+              "children": [
+                {
+                  "text": "Políticas públicas:"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "politicasInput",
+          "type": "text",
+          "label": "Políticas Públicas",
+          "options": {
+            "isLong": true,
+            "placeholder": "Participação em políticas públicas"
+          }
+        },
+        {
+          "id": "webhookBlock",
+          "type": "webhook",
+          "label": "Enviar Dados",
+          "webhook": {
+            "url": "https://n8n.example.com/webhook/tds",
+            "method": "POST",
+            "headers": [],
+            "queryParams": [],
+            "body": "{{{\n  \"action\": \"submit_tds_form\",\n  \"data\": {\n    \"nome\": \"{{nomeInput}}\",\n    \"cpf\": \"{{cpfInput}}\",\n    \"municipio\": \"{{municipioInput}}\",\n    \"sexo\": \"{{sexoChoice}}\",\n    \"idade\": \"{{idadeInput}}\",\n    \"escolaridade\": \"{{escolaridadeChoice}}\",\n    \"cadUnico\": \"{{cadUnicoChoice}}\",\n    \"beneficios\": \"{{beneficiosInput}}\",\n    \"infraestrutura\": \"{{infraestruturaInput}}\",\n    \"rendaPessoal\": \"{{rendaPessoalChoice}}\",\n    \"rendaFamiliar\": \"{{rendaFamiliarInput}}\",\n    \"atividade\": \"{{atividadeChoice}}\",\n    \"credito\": \"{{creditoInput}}\",\n    \"politicas\": \"{{politicasInput}}\"\n  }\n}}}"
+          }
+        }
+      ]
+    }
+  ],
+  "variables": [],
+  "edges": [
+    {
+      "id": "edgeStart",
+      "from": {
+        "eventId": "eventStart"
+      },
+      "to": {
+        "blockId": "identificacaoBlock"
+      }
+    },
+    {
+      "id": "edge1",
+      "from": {
+        "blockId": "identificacaoBlock"
+      },
+      "to": {
+        "blockId": "nomeInput"
+      }
+    },
+    {
+      "id": "edge2",
+      "from": {
+        "blockId": "nomeInput"
+      },
+      "to": {
+        "blockId": "cpfInput"
+      }
+    },
+    {
+      "id": "edge3",
+      "from": {
+        "blockId": "cpfInput"
+      },
+      "to": {
+        "blockId": "municipioInput"
+      }
+    },
+    {
+      "id": "edge4",
+      "from": {
+        "blockId": "municipioInput"
+      },
+      "to": {
+        "blockId": "perfilBlock"
+      }
+    },
+    {
+      "id": "edge5",
+      "from": {
+        "blockId": "perfilBlock"
+      },
+      "to": {
+        "blockId": "sexoChoice"
+      }
+    },
+    {
+      "id": "edge6",
+      "from": {
+        "blockId": "sexoChoice"
+      },
+      "to": {
+        "blockId": "idadeInput"
+      }
+    },
+    {
+      "id": "edge7",
+      "from": {
+        "blockId": "idadeInput"
+      },
+      "to": {
+        "blockId": "escolaridadeChoice"
+      }
+    },
+    {
+      "id": "edge8",
+      "from": {
+        "blockId": "escolaridadeChoice"
+      },
+      "to": {
+        "blockId": "socialBlock"
+      }
+    },
+    {
+      "id": "edge9",
+      "from": {
+        "blockId": "socialBlock"
+      },
+      "to": {
+        "blockId": "cadUnicoChoice"
+      }
+    },
+    {
+      "id": "edge10",
+      "from": {
+        "blockId": "cadUnicoChoice"
+      },
+      "to": {
+        "blockId": "beneficiosInput"
+      }
+    },
+    {
+      "id": "edge11",
+      "from": {
+        "blockId": "beneficiosInput"
+      },
+      "to": {
+        "blockId": "infraestruturaInput"
+      }
+    },
+    {
+      "id": "edge12",
+      "from": {
+        "blockId": "infraestruturaInput"
+      },
+      "to": {
+        "blockId": "rendaBlock"
+      }
+    },
+    {
+      "id": "edge13",
+      "from": {
+        "blockId": "rendaBlock"
+      },
+      "to": {
+        "blockId": "rendaPessoalChoice"
+      }
+    },
+    {
+      "id": "edge14",
+      "from": {
+        "blockId": "rendaPessoalChoice"
+      },
+      "to": {
+        "blockId": "rendaFamiliarInput"
+      }
+    },
+    {
+      "id": "edge15",
+      "from": {
+        "blockId": "rendaFamiliarInput"
+      },
+      "to": {
+        "blockId": "atividadeBlock"
+      }
+    },
+    {
+      "id": "edge16",
+      "from": {
+        "blockId": "atividadeBlock"
+      },
+      "to": {
+        "blockId": "atividadeChoice"
+      }
+    },
+    {
+      "id": "edge17",
+      "from": {
+        "blockId": "atividadeChoice"
+      },
+      "to": {
+        "blockId": "creditoBlock"
+      }
+    },
+    {
+      "id": "edge18",
+      "from": {
+        "blockId": "creditoBlock"
+      },
+      "to": {
+        "blockId": "creditoInput"
+      }
+    },
+    {
+      "id": "edge19",
+      "from": {
+        "blockId": "creditoInput"
+      },
+      "to": {
+        "blockId": "politicasBlock"
+      }
+    },
+    {
+      "id": "edge20",
+      "from": {
+        "blockId": "politicasBlock"
+      },
+      "to": {
+        "blockId": "politicasInput"
+      }
+    },
+    {
+      "id": "edge21",
+      "from": {
+        "blockId": "politicasInput"
+      },
+      "to": {
+        "blockId": "webhookBlock"
+      }
+    }
+  ],
+  "events": [
+    {
+      "id": "eventStart",
+      "type": "start",
+      "outgoingEdgeId": "edgeStart"
+    }
+  ]
+}
